@@ -85,6 +85,16 @@ object AboutScreen : Screen() {
                     LogoHeader()
                 }
 
+                // FORK: Phase 1 branding — "Kuta" as app name, "Based on Aniyomi" attribution.
+                // Upstream credits (Aniyomi/Mihon/Tachiyomi) are in the NOTICE file and the links below.
+                item {
+                    TextPreferenceWidget(
+                        title = "Kuta",
+                        subtitle = "Based on Aniyomi",
+                        onPreferenceClick = {},
+                    )
+                }
+
                 item {
                     TextPreferenceWidget(
                         title = stringResource(MR.strings.version),

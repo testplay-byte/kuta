@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Aniyomi</string>
+    <!-- FORK: Renamed app from Aniyomi to Kuta (Phase 1 branding) -->
+    <string name="app_name" translatable="false">Kuta</string>
 
     <!-- Generic strings -->
     <string name="on">On</string>

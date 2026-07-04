@@ -25,6 +25,8 @@ import eu.kanade.tachiyomi.data.download.anime.AnimeDownloadManager
 import eu.kanade.tachiyomi.data.download.manga.MangaDownloadManager
 import eu.kanade.tachiyomi.ui.category.CategoriesTab
 import eu.kanade.tachiyomi.ui.download.DownloadsTab
+import eu.kanade.tachiyomi.ui.library.anime.AnimeLibraryTab
+import eu.kanade.tachiyomi.ui.library.manga.MangaLibraryTab
 import eu.kanade.tachiyomi.ui.setting.PlayerSettingsScreen
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.ui.stats.StatsTab
@@ -72,7 +74,14 @@ data object MoreTab : Tab {
             incognitoMode = screenModel.incognitoMode,
             onIncognitoModeChange = { screenModel.incognitoMode = it },
             navStyle = navStyle,
-            onClickAlt = { navigator.push(navStyle.moreTab) },
+            // FORK: Gate manga UI — if moreTab is MangaLibraryTab (MOVE_MANGA_TO_MORE nav style),
+            // push AnimeLibraryTab instead so users can't reach manga from the More screen.
+            onClickAlt = {
+                val targetTab = navStyle.moreTab
+                navigator.push(
+                    if (targetTab is MangaLibraryTab) AnimeLibraryTab else targetTab,
+                )
+            },
             onClickDownloadQueue = { navigator.push(DownloadsTab) },
             onClickCategories = { navigator.push(CategoriesTab) },
             onClickStats = { navigator.push(StatsTab) },

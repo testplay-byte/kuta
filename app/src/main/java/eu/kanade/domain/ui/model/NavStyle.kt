@@ -46,6 +46,11 @@ enum class NavStyle(
                 HistoriesTab,
                 BrowseTab,
                 MoreTab,
-            ).apply { remove(this@NavStyle.moreTab) }
+            ).apply {
+                remove(this@NavStyle.moreTab)
+                // FORK: Gate manga UI — always remove MangaLibraryTab from the bottom nav.
+                // Anime-only for now; re-enable in Phase 6. Manga code/data layer stays intact.
+                remove(MangaLibraryTab)
+            }
         }
 }

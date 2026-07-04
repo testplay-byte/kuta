@@ -75,7 +75,11 @@ object HomeScreen : Screen() {
     private const val TAB_NAVIGATOR_KEY = "HomeTabs"
 
     private val uiPreferences: UiPreferences by injectLazy()
-    private val defaultTab = uiPreferences.startScreen().get().tab
+    // FORK: Gate manga UI — if the user's configured start screen is manga, fall back to
+    // AnimeLibraryTab. Anime-only for now; re-enable manga in Phase 6.
+    private val defaultTab = uiPreferences.startScreen().get().tab.let {
+        if (it is MangaLibraryTab) AnimeLibraryTab else it
+    }
     private val moreTab = uiPreferences.navStyle().get().moreTab
 
     @Composable

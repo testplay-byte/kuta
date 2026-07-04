@@ -93,6 +93,7 @@ import eu.kanade.tachiyomi.ui.deeplink.manga.DeepLinkMangaScreen
 import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreen
 import eu.kanade.tachiyomi.ui.entries.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
+import eu.kanade.tachiyomi.ui.home.PlaceholderHomeScreen
 import eu.kanade.tachiyomi.ui.more.NewUpdateScreen
 import eu.kanade.tachiyomi.ui.more.OnboardingScreen
 import eu.kanade.tachiyomi.ui.player.ExternalIntents
@@ -190,8 +191,10 @@ class MainActivity : BaseActivity() {
                 )
             }
 
+            // FORK: Phase 1 — root screen is the placeholder home. The real AniList home is Phase 2.
+            // HomeScreen (the tab navigator, manga gated out) is reachable via the placeholder's "Library" button.
             Navigator(
-                screen = HomeScreen,
+                screen = PlaceholderHomeScreen,
                 disposeBehavior = NavigatorDisposeBehavior(
                     disposeNestedNavigators = false,
                     disposeSteps = true,

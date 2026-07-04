@@ -1334,7 +1334,7 @@ fun NeonTopAppBar(
                 }
             }
         },
-        actions = actions,
+        actions = { actions() },
         modifier = modifier.bottomBorder(colors.borderDefault, 1.dp),
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = colors.bgGlass,

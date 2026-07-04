@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import kotlin.random.Random
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -758,7 +759,8 @@ fun NotebookBadge(
         KutaBadgeVariant.ERROR -> colors.accentTertiary
     }
     // FORK: random -2..+2 deg rotation per-instance — looks hand-pinned (§5.9).
-    val rotation = remember { (-2f..2f).random() }
+    // FORK: random -2..+2 deg rotation per-instance — looks hand-pinned (§5.9).
+    val rotation = remember { Random.nextFloat() * 4f - 2f }
 
     Box(
         modifier = modifier
@@ -907,7 +909,7 @@ fun NotebookSnackbar(
     val typography = kutaTypography
     // FORK: sticky-note styled snackbar (per §5.11 aesthetic): yellow bg,
     // slight rotation, paper shadow, hand-pinned feel.
-    val rotation = remember { (-1f..1f).random() }
+    val rotation = remember { Random.nextFloat() * 2f - 1f }
     Box(
         modifier = modifier
             .rotate(rotation)
@@ -1032,7 +1034,7 @@ fun NotebookTopAppBar(
                 )
             }
         },
-        actions = actions,
+        actions = { actions() },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = colors.bgSurface,
             titleContentColor = colors.fgPrimary,

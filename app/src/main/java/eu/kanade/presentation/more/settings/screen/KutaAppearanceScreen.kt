@@ -1,4 +1,4 @@
-package tachiyomi.presentation.core.kuta.settings
+package eu.kanade.presentation.more.settings.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,13 +7,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -34,11 +31,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.components.AppBar
+import eu.kanade.presentation.util.Screen
 import tachiyomi.presentation.core.components.material.Scaffold
-import tachiyomi.presentation.core.kuta.components.KutaButton
-import tachiyomi.presentation.core.kuta.components.KutaButtonVariant
+import tachiyomi.presentation.core.kuta.components.KutaAlertDialog
 import tachiyomi.presentation.core.kuta.components.KutaCard
 import tachiyomi.presentation.core.kuta.components.KutaListItem
 import tachiyomi.presentation.core.kuta.components.KutaToggle
@@ -97,7 +93,6 @@ object KutaAppearanceScreen : Screen() {
                 Text("Design Language", style = MaterialTheme.typography.titleMedium)
                 DesignLanguageSelector(designLanguage) { newDesign ->
                     if (newDesign != designLanguage) {
-                        // Switching design resets accent to that design's default
                         prefs.designLanguage().set(newDesign)
                         prefs.setAccent(defaultAccentFor(newDesign))
                     }
@@ -235,7 +230,7 @@ object KutaAppearanceScreen : Screen() {
         var green by remember { mutableStateOf((initialColor.green * 255).toInt()) }
         var blue by remember { mutableStateOf((initialColor.blue * 255).toInt()) }
 
-        tachiyomi.presentation.core.kuta.components.KutaAlertDialog(
+        KutaAlertDialog(
             title = "Custom Color",
             message = "RGB: $red, $green, $blue",
             onConfirm = { onConfirm(Color(red, green, blue)) },

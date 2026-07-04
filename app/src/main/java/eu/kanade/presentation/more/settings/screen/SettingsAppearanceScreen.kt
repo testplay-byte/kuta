@@ -20,8 +20,7 @@ import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.screen.appearance.AppLanguageScreen
 import eu.kanade.presentation.more.settings.widget.AppThemeModePreferenceWidget
 import eu.kanade.presentation.more.settings.widget.AppThemePreferenceWidget
-// FORK: Phase 2 — Kuta design system settings
-import tachiyomi.presentation.core.kuta.settings.KutaAppearanceScreen
+// FORK: Phase 2 — KutaAppearanceScreen is in this same package (no import needed)
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableMap

@@ -45,4 +45,7 @@ dependencies {
     implementation(androidx.paging.runtime)
     implementation(androidx.paging.compose)
     implementation(kotlinx.immutables)
+
+    // FORK: Phase 2 — Haze library for Neon design's glass-morphism (backdrop-blur with API < 31 fallback)
+    implementation("dev.chrisbanes.haze:haze:0.7.0")
 }

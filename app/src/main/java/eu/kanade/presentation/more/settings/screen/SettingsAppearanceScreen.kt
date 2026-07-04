@@ -20,6 +20,8 @@ import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.screen.appearance.AppLanguageScreen
 import eu.kanade.presentation.more.settings.widget.AppThemeModePreferenceWidget
 import eu.kanade.presentation.more.settings.widget.AppThemePreferenceWidget
+// FORK: Phase 2 — Kuta design system settings
+import tachiyomi.presentation.core.kuta.settings.KutaAppearanceScreen
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableMap
@@ -53,6 +55,8 @@ object SettingsAppearanceScreen : SearchableSettings {
         uiPreferences: UiPreferences,
     ): Preference.PreferenceGroup {
         val context = LocalContext.current
+        // FORK: Phase 2 — navigator for Kuta Design settings entry
+        val navigator = LocalNavigator.currentOrThrow
 
         val themeModePref = uiPreferences.themeMode()
         val themeMode by themeModePref.collectAsState()
@@ -93,6 +97,12 @@ object SettingsAppearanceScreen : SearchableSettings {
                         (context as? Activity)?.let { ActivityCompat.recreate(it) }
                         true
                     },
+                ),
+                // FORK: Phase 2 — Kuta design system entry (Neon / Notebook / Brutalist / Material)
+                Preference.PreferenceItem.TextPreference(
+                    title = "Kuta Design",
+                    subtitle = "Neon • Notebook • Brutalist • Material",
+                    onClick = { navigator.push(KutaAppearanceScreen) },
                 ),
             ),
         )

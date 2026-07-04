@@ -89,5 +89,9 @@ class PreferenceModule(val app: Application) : InjektModule {
         addSingletonFactory {
             BasePreferences(app, get())
         }
+        // FORK: Phase 2 — Kuta design system preferences
+        addSingletonFactory {
+            tachiyomi.presentation.core.kuta.preferences.KutaPreferences(get())
+        }
     }
 }

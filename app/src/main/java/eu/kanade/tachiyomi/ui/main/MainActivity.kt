@@ -95,6 +95,9 @@ import eu.kanade.tachiyomi.ui.entries.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.home.PlaceholderHomeScreen
 import eu.kanade.tachiyomi.ui.more.NewUpdateScreen
+// FORK: Phase 2 — Kuta design system imports
+import tachiyomi.presentation.core.kuta.preferences.KutaPreferences
+import tachiyomi.presentation.core.kuta.theme.KutaTheme
 import eu.kanade.tachiyomi.ui.more.OnboardingScreen
 import eu.kanade.tachiyomi.ui.player.ExternalIntents
 import eu.kanade.tachiyomi.ui.player.PlayerActivity
@@ -191,15 +194,28 @@ class MainActivity : BaseActivity() {
                 )
             }
 
-            // FORK: Phase 1 — root screen is the placeholder home. The real AniList home is Phase 2.
-            // HomeScreen (the tab navigator, manga gated out) is reachable via the placeholder's "Library" button.
-            Navigator(
-                screen = PlaceholderHomeScreen,
-                disposeBehavior = NavigatorDisposeBehavior(
-                    disposeNestedNavigators = false,
-                    disposeSteps = true,
-                ),
-            ) { navigator ->
+            // FORK: Phase 2 — wrap app in KutaTheme for multi-design-language support.
+            // TachiyomiTheme (M3) is already active via setComposeContent — it provides the fallback
+            // for unmigrated screens. KutaTheme provides design-specific locals for migrated screens.
+            val kutaPrefs = remember { Injekt.get<KutaPreferences>() }
+            val kutaDesignLanguage by kutaPrefs.designLanguage().collectAsState()
+            val kutaMode by kutaPrefs.mode().collectAsState()
+            val kutaAccent by kutaPrefs.accentChanges().collectAsState(initial = kutaPrefs.accent())
+
+            KutaTheme(
+                designLanguage = kutaDesignLanguage,
+                mode = kutaMode,
+                accent = kutaAccent,
+            ) {
+                // FORK: Phase 1 — root screen is the placeholder home. The real AniList home is Phase 2.
+                // HomeScreen (the tab navigator, manga gated out) is reachable via the placeholder's "Library" button.
+                Navigator(
+                    screen = PlaceholderHomeScreen,
+                    disposeBehavior = NavigatorDisposeBehavior(
+                        disposeNestedNavigators = false,
+                        disposeSteps = true,
+                    ),
+                ) { navigator ->
 
                 LaunchedEffect(navigator) {
                     this@MainActivity.navigator = navigator
@@ -286,6 +302,7 @@ class MainActivity : BaseActivity() {
                 CheckForUpdates()
                 ShowOnboarding()
             }
+            } // end KutaTheme
 
             var showChangelog by remember { mutableStateOf(didMigration && !BuildConfig.DEBUG) }
             if (showChangelog) {

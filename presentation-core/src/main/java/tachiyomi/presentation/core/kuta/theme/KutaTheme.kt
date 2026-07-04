@@ -3,6 +3,15 @@ package tachiyomi.presentation.core.kuta.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import tachiyomi.presentation.core.kuta.brutalist.BrutalistDarkColors
+import tachiyomi.presentation.core.kuta.brutalist.BrutalistLightColors
+import tachiyomi.presentation.core.kuta.brutalist.BrutalistTypography
+import tachiyomi.presentation.core.kuta.neon.NeonDarkColors
+import tachiyomi.presentation.core.kuta.neon.NeonLightColors
+import tachiyomi.presentation.core.kuta.neon.NeonTypography
+import tachiyomi.presentation.core.kuta.notebook.NotebookDarkColors
+import tachiyomi.presentation.core.kuta.notebook.NotebookLightColors
+import tachiyomi.presentation.core.kuta.notebook.NotebookTypography
 
 /**
  * FORK: Phase 2 — KutaTheme: the multi-design-language theme wrapper.

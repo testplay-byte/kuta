@@ -1,7 +1,7 @@
 package tachiyomi.presentation.core.kuta.theme
 
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.ms
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * FORK: Phase 2 — Shared spacing scale and motion durations.
@@ -19,9 +19,9 @@ object KutaSpacing {
 }
 
 object KutaMotion {
-    val instant = 0.ms       // no animation (state changes)
-    val fast = 100.ms        // hover, press
-    val normal = 200.ms      // card lift, toggle
-    val slow = 300.ms        // sheet, dialog
-    val slower = 500.ms      // screen transition
+    val instant = 0.milliseconds       // no animation (state changes)
+    val fast = 100.milliseconds        // hover, press
+    val normal = 200.milliseconds      // card lift, toggle
+    val slow = 300.milliseconds        // sheet, dialog
+    val slower = 500.milliseconds      // screen transition
 }

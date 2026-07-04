@@ -94,6 +94,8 @@ import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreen
 import eu.kanade.tachiyomi.ui.entries.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.home.PlaceholderHomeScreen
+// FORK: Phase 3 — new AniList-powered home screen (replaces PlaceholderHomeScreen as root)
+import eu.kanade.presentation.home.HomeScreen as KutaHomeScreen
 import eu.kanade.tachiyomi.ui.more.NewUpdateScreen
 // FORK: Phase 2 — Kuta design system imports
 import tachiyomi.presentation.core.kuta.preferences.KutaPreferences
@@ -207,10 +209,11 @@ class MainActivity : BaseActivity() {
                 mode = kutaMode,
                 accent = kutaAccent,
             ) {
-                // FORK: Phase 1 — root screen is the placeholder home. The real AniList home is Phase 2.
-                // HomeScreen (the tab navigator, manga gated out) is reachable via the placeholder's "Library" button.
+                // FORK: Phase 3 — root screen is the new AniList-powered home screen.
+                // The old PlaceholderHomeScreen is kept for reference but no longer used as root.
+                // HomeScreen (the tab navigator, manga gated out) is reachable via the bottom nav's Library tab.
                 Navigator(
-                    screen = PlaceholderHomeScreen,
+                    screen = KutaHomeScreen,
                     disposeBehavior = NavigatorDisposeBehavior(
                         disposeNestedNavigators = false,
                         disposeSteps = true,

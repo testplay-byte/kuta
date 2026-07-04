@@ -182,11 +182,9 @@ fun Material3Dialog(onDismissRequest: () -> Unit, modifier: Modifier = Modifier,
     AlertDialog(
         onDismissRequest = onDismissRequest,
         confirmButton = {},
-        dismissButton = {},
         modifier = modifier,
-    ) {
-        content()
-    }
+        text = { content() },
+    )
 }
 
 @Composable

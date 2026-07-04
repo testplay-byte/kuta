@@ -192,6 +192,19 @@ class AppModule(val app: Application) : InjektModule {
         addSingletonFactory { NetworkHelper(app, get()) }
         addSingletonFactory { JavaScriptEngine(app) }
 
+        // FORK: Phase 3 — AniList data layer (browse-only, no auth)
+        addSingletonFactory {
+            eu.kanade.tachiyomi.data.anilist.AniListApi(
+                client = get<NetworkHelper>().client,
+                json = get(),
+            )
+        }
+        addSingletonFactory {
+            eu.kanade.tachiyomi.data.anilist.AniListRepository(
+                api = get(),
+            )
+        }
+
         addSingletonFactory<MangaSourceManager> { AndroidMangaSourceManager(app, get(), get()) }
         addSingletonFactory<AnimeSourceManager> { AndroidAnimeSourceManager(app, get(), get()) }
 

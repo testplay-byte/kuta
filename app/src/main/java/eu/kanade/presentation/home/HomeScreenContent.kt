@@ -32,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,7 +61,6 @@ import tachiyomi.presentation.core.kuta.components.KutaIconButton
 import tachiyomi.presentation.core.kuta.components.KutaSkeleton
 import tachiyomi.presentation.core.kuta.theme.LocalKutaColors
 import tachiyomi.presentation.core.kuta.theme.LocalKutaTypography
-import tachiyomi.presentation.core.util.collectAsState
 
 /**
  * FORK: Phase 3 — Home screen content (AniList browse).
@@ -93,7 +93,7 @@ fun HomeScreenContent(screenModel: HomeScreenModel) {
                 when (val state = trending) {
                     is SectionState.Loading -> HeroSkeleton()
                     is SectionState.Error -> SectionError("Couldn't load trending", state.message) { screenModel.retryTrending() }
-                    is SectionState.Success -> {
+                    is SectionState.Success<List<AniListMedia>> -> {
                         val heroItems = state.data.take(5)
                         if (heroItems.isNotEmpty()) {
                             HeroCarousel(items = heroItems) { media ->
@@ -111,7 +111,7 @@ fun HomeScreenContent(screenModel: HomeScreenModel) {
                 when (val state = trending) {
                     is SectionState.Loading -> CardRowSkeleton()
                     is SectionState.Error -> SectionError("Couldn't load trending", state.message) { screenModel.retryTrending() }
-                    is SectionState.Success -> AnimeCardRow(items = state.data) { media ->
+                    is SectionState.Success<List<AniListMedia>> -> AnimeCardRow(items = state.data) { media ->
                         android.widget.Toast.makeText(context, "Tapped: ${media.displayTitle}", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -123,7 +123,7 @@ fun HomeScreenContent(screenModel: HomeScreenModel) {
                 when (val state = seasonal) {
                     is SectionState.Loading -> CardRowSkeleton()
                     is SectionState.Error -> SectionError("Couldn't load seasonal", state.message) { screenModel.retrySeasonal() }
-                    is SectionState.Success -> AnimeCardRow(items = state.data) { media ->
+                    is SectionState.Success<List<AniListMedia>> -> AnimeCardRow(items = state.data) { media ->
                         android.widget.Toast.makeText(context, "Tapped: ${media.displayTitle}", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -135,7 +135,7 @@ fun HomeScreenContent(screenModel: HomeScreenModel) {
                 when (val state = popular) {
                     is SectionState.Loading -> CardRowSkeleton()
                     is SectionState.Error -> SectionError("Couldn't load popular", state.message) { screenModel.retryPopular() }
-                    is SectionState.Success -> AnimeCardRow(items = state.data) { media ->
+                    is SectionState.Success<List<AniListMedia>> -> AnimeCardRow(items = state.data) { media ->
                         android.widget.Toast.makeText(context, "Tapped: ${media.displayTitle}", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }

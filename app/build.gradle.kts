@@ -90,12 +90,13 @@ android {
         getByName("benchmark").res.srcDirs("src/debug/res")
     }
 
+    // FORK: Only build arm64-v8a for faster debug builds. Revisit for release in Phase 5.
     splits {
         abi {
             isEnable = true
-            isUniversalApk = true
+            isUniversalApk = false
             reset()
-            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            include("arm64-v8a")
         }
     }
 

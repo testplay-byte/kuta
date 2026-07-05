@@ -189,6 +189,8 @@ dependencies {
     implementation(projects.coreMetadata)
     implementation(projects.sourceApi)
     implementation(projects.sourceLocal)
+    // FORK: Phase 3 — Haze for glass-morphism blur (used by home screen top bar)
+    implementation("dev.chrisbanes.haze:haze:0.7.0")
     implementation(projects.data)
     implementation(projects.domain)
     implementation(projects.presentationCore)

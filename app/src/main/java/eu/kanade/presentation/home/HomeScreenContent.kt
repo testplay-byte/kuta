@@ -8,16 +8,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -28,15 +31,15 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -48,10 +51,14 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.hazeChild
+import eu.kanade.tachiyomi.data.anilist.AniListAiringSchedule
 import eu.kanade.tachiyomi.data.anilist.AniListMedia
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import kotlinx.coroutines.delay
-import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.kuta.components.KutaBadge
 import tachiyomi.presentation.core.kuta.components.KutaBadgeVariant
 import tachiyomi.presentation.core.kuta.components.KutaButton
@@ -61,10 +68,18 @@ import tachiyomi.presentation.core.kuta.components.KutaIconButton
 import tachiyomi.presentation.core.kuta.components.KutaSkeleton
 import tachiyomi.presentation.core.kuta.theme.LocalKutaColors
 import tachiyomi.presentation.core.kuta.theme.LocalKutaTypography
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 /**
  * FORK: Phase 3 — Home screen content (AniList browse).
+ * Matches the reference website layout (https://1.pandn47859347.workers.dev/).
  * Uses Kuta* components throughout so it reskins per active design language.
+ *
+ * Layout: Haze-blurred top bar → hero carousel → 3 content rows →
+ * Coming Up Next (airing schedule) → Browse by Genre (2-col grid).
  */
 @Composable
 fun HomeScreenContent(screenModel: HomeScreenModel) {
@@ -72,21 +87,21 @@ fun HomeScreenContent(screenModel: HomeScreenModel) {
     val trending by screenModel.trending.collectAsState()
     val seasonal by screenModel.seasonal.collectAsState()
     val popular by screenModel.popular.collectAsState()
+    val airing by screenModel.airing.collectAsState()
     val colors = LocalKutaColors.current
     val context = LocalContext.current
+    val hazeState = remember { HazeState() }
 
-    Scaffold(
-        containerColor = colors.bgBase,
-        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0),
-    ) { padding ->
+    Box(modifier = Modifier.fillMaxSize().background(colors.bgBase)) {
+        // Scrollable content (Haze source — gets blurred behind the top bar)
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colors.bgBase),
+                .haze(hazeState, HazeStyle(tint = colors.bgBase.copy(alpha = 0.6f), blurRadius = 20.dp)),
             contentPadding = PaddingValues(bottom = 80.dp),
         ) {
-            // Top bar
-            item { HomeTopBar(onSettingsClick = { navigator.push(SettingsScreen()) }) }
+            // Spacer for the top bar height (so content isn't hidden behind it initially)
+            item { Spacer(Modifier.height(72.dp)) }
 
             // Hero carousel (trending)
             item {
@@ -97,7 +112,6 @@ fun HomeScreenContent(screenModel: HomeScreenModel) {
                         val heroItems = state.data.take(5)
                         if (heroItems.isNotEmpty()) {
                             HeroCarousel(items = heroItems) { media ->
-                                // FORK: Phase 3 — card tap is a no-op for now (detail screen is future phase)
                                 android.widget.Toast.makeText(context, "Tapped: ${media.displayTitle}", android.widget.Toast.LENGTH_SHORT).show()
                             }
                         }
@@ -141,42 +155,67 @@ fun HomeScreenContent(screenModel: HomeScreenModel) {
                 }
             }
 
-            // Browse by Genre
+            // Coming Up Next (airing schedule) — NEW
+            item { SectionHeader("Coming Up Next") }
+            item {
+                when (val state = airing) {
+                    is SectionState.Loading -> AiringSkeleton()
+                    is SectionState.Error -> SectionError("Couldn't load schedule", state.message) { screenModel.retryAiring() }
+                    is SectionState.Success<List<AniListAiringSchedule>> -> {
+                        AiringScheduleList(items = state.data.take(8)) { schedule ->
+                            android.widget.Toast.makeText(context, "Tapped: ${schedule.media?.displayTitle ?: "Unknown"} Ep ${schedule.episode}", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+
+            // Browse by Genre (2-col grid)
             item { SectionHeader("Browse by Genre") }
-            item { GenreGrid { genre ->
-                android.widget.Toast.makeText(context, "Genre: $genre (coming soon)", android.widget.Toast.LENGTH_SHORT).show()
-            } }
+            item {
+                GenreGrid { genre ->
+                    android.widget.Toast.makeText(context, "Genre: $genre (coming soon)", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
         }
+
+        // Top bar (Haze child — shows frosted blur of content scrolling under it)
+        HomeTopBar(
+            hazeState = hazeState,
+            onSettingsClick = { navigator.push(SettingsScreen()) },
+            modifier = Modifier.align(Alignment.TopCenter),
+        )
     }
 }
 
-// ===== Top Bar =====
+// ===== Top Bar (Haze blur + status bar padding) =====
 
 @Composable
-private fun HomeTopBar(onSettingsClick: () -> Unit) {
+private fun HomeTopBar(hazeState: HazeState, onSettingsClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = LocalKutaColors.current
     val typography = LocalKutaTypography.current
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .hazeChild(hazeState, shape = RoundedCornerShape(0.dp))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Logo / app name
-        Text(
+        // "Kuta" logo — use display typography (Caveat in Notebook, Bold in others)
+        androidx.compose.material3.Text(
             text = "Kuta",
-            style = typography.display?.copy(fontSize = 24.sp) ?: MaterialTheme.typography.titleLarge,
+            style = typography.display?.copy(fontSize = 26.sp) ?: androidx.compose.material3.MaterialTheme.typography.titleLarge,
             color = colors.accentPrimary,
             fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.width(16.dp))
-        // Search bar (placeholder — tappable, no-op for now)
+        // Search bar (translucent, rounded, tappable placeholder)
         Row(
             modifier = Modifier
                 .weight(1f)
                 .height(40.dp)
                 .clip(RoundedCornerShape(20.dp))
-                .background(colors.bgElevated)
+                .background(colors.bgElevated.copy(alpha = 0.7f))
                 .clickable { /* FORK: Phase 3 — search is a future phase */ }
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -188,7 +227,7 @@ private fun HomeTopBar(onSettingsClick: () -> Unit) {
                 modifier = Modifier.size(18.dp),
             )
             Spacer(Modifier.width(8.dp))
-            Text(
+            androidx.compose.material3.Text(
                 text = "Search anime…",
                 style = typography.bodySmall,
                 color = colors.fgMuted,
@@ -220,34 +259,32 @@ private fun HeroCarousel(items: List<AniListMedia>, onTap: (AniListMedia) -> Uni
         }
     }
 
-    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-        Column {
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .clip(RoundedCornerShape(16.dp)),
-            ) { page ->
-                HeroSlide(items[page], onTap)
-            }
-            Spacer(Modifier.height(8.dp))
-            // Dot indicators
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                repeat(items.size) { index ->
-                    val isActive = pagerState.currentPage == index
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 3.dp)
-                            .height(6.dp)
-                            .width(if (isActive) 18.dp else 6.dp)
-                            .clip(CircleShape)
-                            .background(if (isActive) colors.accentPrimary else colors.borderDefault),
-                    )
-                }
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .clip(RoundedCornerShape(16.dp)),
+        ) { page ->
+            HeroSlide(items[page], onTap)
+        }
+        Spacer(Modifier.height(8.dp))
+        // Dot indicators (active dot is wider)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            repeat(items.size) { index ->
+                val isActive = pagerState.currentPage == index
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 3.dp)
+                        .height(6.dp)
+                        .width(if (isActive) 18.dp else 6.dp)
+                        .clip(CircleShape)
+                        .background(if (isActive) colors.accentPrimary else colors.borderDefault),
+                )
             }
         }
     }
@@ -260,7 +297,6 @@ private fun HeroSlide(media: AniListMedia, onTap: (AniListMedia) -> Unit) {
     val context = LocalContext.current
 
     Box(modifier = Modifier.fillMaxSize().clickable { onTap(media) }) {
-        // Banner image
         val imageUrl = media.bannerImage ?: media.coverUrl
         AsyncImage(
             model = imageUrl,
@@ -285,27 +321,29 @@ private fun HeroSlide(media: AniListMedia, onTap: (AniListMedia) -> Unit) {
                 .align(Alignment.BottomStart)
                 .padding(16.dp),
         ) {
-            Text(
+            // Title: display typography (Caveat in Notebook)
+            androidx.compose.material3.Text(
                 text = media.displayTitle,
-                style = typography.headline,
+                style = typography.display?.copy(fontSize = 30.sp) ?: typography.headline,
                 color = colors.fgPrimary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(4.dp))
+            // Metadata row: year + format + score
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (media.seasonYear != null) {
-                    Text("${media.seasonYear}", style = typography.monoValue ?: typography.body, color = colors.fgSecondary)
+                    androidx.compose.material3.Text("${media.seasonYear}", style = typography.monoValue ?: typography.body, color = colors.fgSecondary)
                     Spacer(Modifier.width(8.dp))
                 }
                 if (media.formatDisplay.isNotEmpty()) {
-                    Text(media.formatDisplay, style = typography.monoValue ?: typography.body, color = colors.fgSecondary)
+                    androidx.compose.material3.Text(media.formatDisplay, style = typography.monoValue ?: typography.body, color = colors.fgSecondary)
                     Spacer(Modifier.width(8.dp))
                 }
                 if (media.averageScore != null) {
                     androidx.compose.material3.Icon(Icons.Filled.Star, contentDescription = null, tint = colors.accentPrimary, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(2.dp))
-                    Text("${media.averageScore}", style = typography.monoValue ?: typography.body, color = colors.fgSecondary)
+                    androidx.compose.material3.Text("${media.averageScore}", style = typography.monoValue ?: typography.body, color = colors.fgSecondary)
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -317,7 +355,7 @@ private fun HeroSlide(media: AniListMedia, onTap: (AniListMedia) -> Unit) {
                     variant = KutaButtonVariant.PRIMARY,
                 )
                 KutaButton(
-                    text = "My List",
+                    text = "Add to List",
                     onClick = { android.widget.Toast.makeText(context, "Add to list coming soon", android.widget.Toast.LENGTH_SHORT).show() },
                     icon = Icons.Outlined.Add,
                     variant = KutaButtonVariant.SECONDARY,
@@ -336,16 +374,26 @@ private fun SectionHeader(title: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 12.dp),
+            .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = title,
-            style = typography.title,
-            color = colors.fgPrimary,
-            modifier = Modifier.weight(1f),
-        )
-        Text(
+        Column(modifier = Modifier.weight(1f)) {
+            androidx.compose.material3.Text(
+                text = title,
+                style = typography.headline,
+                color = colors.fgPrimary,
+            )
+            // Ink underline (semi-transparent accent bar, slightly rotated)
+            Box(
+                modifier = Modifier
+                    .padding(top = 2.dp)
+                    .width(48.dp)
+                    .height(3.dp)
+                    .rotate(-0.5f)
+                    .background(colors.accentPrimary.copy(alpha = 0.4f)),
+            )
+        }
+        androidx.compose.material3.Text(
             text = "See All →",
             style = typography.bodySmall,
             color = colors.accentPrimary,
@@ -371,18 +419,17 @@ private fun AnimeCardRow(items: List<AniListMedia>, onTap: (AniListMedia) -> Uni
 private fun AnimePosterCard(media: AniListMedia, onTap: (AniListMedia) -> Unit) {
     val colors = LocalKutaColors.current
     val typography = LocalKutaTypography.current
-    val context = LocalContext.current
 
     KutaCard(
         modifier = Modifier
-            .width(130.dp)
+            .width(140.dp)
             .clickable { onTap(media) },
     ) {
         Column {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(173.dp), // 3:4 aspect for 130dp width
+                    .aspectRatio(3f / 4f),
             ) {
                 AsyncImage(
                     model = media.coverUrl,
@@ -398,30 +445,59 @@ private fun AnimePosterCard(media: AniListMedia, onTap: (AniListMedia) -> Unit) 
                             .padding(6.dp),
                     ) {
                         KutaBadge(
-                            text = "${media.averageScore}",
+                            text = "★ ${media.averageScore}",
                             variant = KutaBadgeVariant.ACCENT,
+                        )
+                    }
+                }
+                // TRENDING badge (top-left, washi-tape style)
+                if (media.popularity != null && media.popularity > 50000) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(4.dp)
+                            .rotate(-2f)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(colors.accentQuaternary.copy(alpha = 0.85f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    ) {
+                        androidx.compose.material3.Text(
+                            text = "TRENDING",
+                            style = typography.label,
+                            color = Color.White,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
                         )
                     }
                 }
             }
             Column(modifier = Modifier.padding(8.dp)) {
-                Text(
+                androidx.compose.material3.Text(
                     text = media.displayTitle,
-                    style = typography.bodySmall,
+                    style = typography.body,
                     color = colors.fgPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
                 )
-                if (media.formatDisplay.isNotEmpty() || media.seasonYear != null) {
-                    val meta = listOfNotNull(
-                        media.formatDisplay.takeIf { it.isNotEmpty() },
-                        media.seasonYear?.toString(),
-                    ).joinToString(" • ")
-                    Text(
-                        text = meta,
-                        style = typography.monoValue ?: typography.bodySmall,
+                Spacer(Modifier.height(2.dp))
+                // Metadata: episodes + genres
+                val episodes = media.episodes
+                val episodeText = if (episodes != null && episodes > 0) "$episodes Episodes" else "Ongoing"
+                androidx.compose.material3.Text(
+                    text = episodeText,
+                    style = typography.bodySmall,
+                    color = colors.fgMuted,
+                    fontSize = 11.sp,
+                )
+                val topGenres = media.genres.take(2).joinToString(", ")
+                if (topGenres.isNotEmpty()) {
+                    androidx.compose.material3.Text(
+                        text = topGenres,
+                        style = typography.bodySmall,
                         color = colors.fgMuted,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                     )
                 }
             }
@@ -429,41 +505,135 @@ private fun AnimePosterCard(media: AniListMedia, onTap: (AniListMedia) -> Unit) 
     }
 }
 
-// ===== Genre Grid =====
+// ===== Coming Up Next (Airing Schedule) =====
+
+@Composable
+private fun AiringScheduleList(items: List<AniListAiringSchedule>, onTap: (AniListAiringSchedule) -> Unit) {
+    val colors = LocalKutaColors.current
+    val typography = LocalKutaTypography.current
+    val now = System.currentTimeMillis()
+
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        items.forEach { schedule ->
+            AiringItem(schedule, now, onTap)
+        }
+    }
+}
+
+@Composable
+private fun AiringItem(schedule: AniListAiringSchedule, now: Long, onTap: (AniListAiringSchedule) -> Unit) {
+    val colors = LocalKutaColors.current
+    val typography = LocalKutaTypography.current
+    val context = LocalContext.current
+    val media = schedule.media
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onTap(schedule) }
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Thumbnail (56dp)
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(colors.bgElevated),
+        ) {
+            AsyncImage(
+                model = media?.coverUrl,
+                contentDescription = media?.displayTitle,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        // Title + episode
+        Column(modifier = Modifier.weight(1f)) {
+            androidx.compose.material3.Text(
+                text = media?.displayTitle ?: "Unknown",
+                style = typography.body,
+                color = colors.fgPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontWeight = FontWeight.Medium,
+            )
+            androidx.compose.material3.Text(
+                text = "Episode ${schedule.episode}",
+                style = typography.bodySmall,
+                color = colors.fgMuted,
+            )
+        }
+        // Countdown badge
+        val countdown = formatCountdown(schedule.timeUntilAiring, schedule.airingAt, now)
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(colors.accentPrimary.copy(alpha = 0.15f))
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+        ) {
+            androidx.compose.material3.Text(
+                text = countdown,
+                style = typography.monoValue ?: typography.bodySmall,
+                color = colors.accentPrimary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+/** Format the countdown: "2h 30m", "Tomorrow 3:00 PM", or "3d 4h". */
+private fun formatCountdown(timeUntilAiring: Long, airingAt: Long, now: Long): String {
+    val seconds = timeUntilAiring
+    val hours = TimeUnit.SECONDS.toHours(seconds)
+    val minutes = TimeUnit.SECONDS.toMinutes(seconds) - hours * 60
+    val days = TimeUnit.SECONDS.toDays(seconds)
+    return when {
+        days >= 2 -> "${days}d ${hours - days * 24}h"
+        days == 1L -> "Tomorrow " + SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(airingAt * 1000))
+        hours >= 1 -> "${hours}h ${minutes}m"
+        else -> "${minutes}m"
+    }
+}
+
+// ===== Genre Grid (2-column) =====
 
 @Composable
 private fun GenreGrid(onGenreTap: (String) -> Unit) {
     val genres = listOf(
-        "Action" to Color(0xFFEF4444),
-        "Adventure" to Color(0xFFF59E0B),
-        "Comedy" to Color(0xFFEAB308),
-        "Fantasy" to Color(0xFF8B5CF6),
-        "Horror" to Color(0xFF6B7280),
-        "Mystery" to Color(0xFF06B6D4),
-        "Romance" to Color(0xFFEC4899),
-        "Sci-Fi" to Color(0xFF3B82F6),
+        "Action" to listOf(Color(0xFFF97316), Color(0xFFEF4444)),       // orange→red
+        "Adventure" to listOf(Color(0xFFD97706), Color(0xFFF97316)),    // amber→orange
+        "Comedy" to listOf(Color(0xFFEAB308), Color(0xFFF59E0B)),        // yellow→amber
+        "Fantasy" to listOf(Color(0xFFA78BFA), Color(0xFF8B5CF6)),       // violet→purple
+        "Horror" to listOf(Color(0xFF6B7280), Color(0xFF374151)),        // gray→dark gray
+        "Mystery" to listOf(Color(0xFF06B6D4), Color(0xFF3B82F6)),       // cyan→blue
+        "Romance" to listOf(Color(0xFFFB7185), Color(0xFFEC4899)),       // rose→pink
+        "Sci-Fi" to listOf(Color(0xFF3B82F6), Color(0xFF6366F1)),        // blue→indigo
     )
     val rows = genres.chunked(2)
-    rows.forEach { rowGenres ->
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            rowGenres.forEach { (name, color) ->
-                GenreCard(name, color, Modifier.weight(1f), onGenreTap)
-            }
-            // Pad odd rows with a spacer so cards stay full-width
-            if (rowGenres.size == 1) {
-                Spacer(Modifier.weight(1f))
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        rows.forEach { rowGenres ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                rowGenres.forEach { (name, gradient) ->
+                    GenreCard(name, gradient, Modifier.weight(1f), onGenreTap)
+                }
+                if (rowGenres.size == 1) {
+                    Spacer(Modifier.weight(1f))
+                }
             }
         }
     }
 }
 
 @Composable
-private fun GenreCard(name: String, color: Color, modifier: Modifier = Modifier, onTap: (String) -> Unit) {
+private fun GenreCard(name: String, gradient: List<Color>, modifier: Modifier = Modifier, onTap: (String) -> Unit) {
     val colors = LocalKutaColors.current
     val typography = LocalKutaTypography.current
     KutaCard(
@@ -476,17 +646,29 @@ private fun GenreCard(name: String, color: Color, modifier: Modifier = Modifier,
                 .fillMaxSize()
                 .background(
                     Brush.horizontalGradient(
-                        0f to color.copy(alpha = 0.7f),
-                        1f to color.copy(alpha = 0.4f),
+                        0f to gradient[0],
+                        1f to gradient[1],
                     ),
                 ),
-            contentAlignment = Alignment.Center,
         ) {
-            Text(
+            // Washi tape decoration (top-center, rotated)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 4.dp)
+                    .width(60.dp)
+                    .height(14.dp)
+                    .rotate(-2f)
+                    .background(colors.washiTape.copy(alpha = 0.7f))
+                    .clip(RoundedCornerShape(2.dp)),
+            )
+            // Genre name (centered, white, bold)
+            androidx.compose.material3.Text(
                 text = name,
                 style = typography.subtitle,
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.Center),
             )
         }
     }
@@ -500,7 +682,7 @@ private fun HeroSkeleton() {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        height = 200,
+        height = 220,
     )
 }
 
@@ -511,7 +693,17 @@ private fun CardRowSkeleton() {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(4) {
-            KutaSkeleton(modifier = Modifier.width(130.dp), height = 220)
+            KutaSkeleton(modifier = Modifier.width(140.dp), height = 220)
+        }
+    }
+}
+
+@Composable
+private fun AiringSkeleton() {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        repeat(4) {
+            KutaSkeleton(modifier = Modifier.fillMaxWidth(), height = 56)
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
@@ -526,9 +718,9 @@ private fun SectionError(title: String, message: String, onRetry: () -> Unit) {
             .padding(horizontal = 16.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(title, style = typography.subtitle, color = colors.accentTertiary)
+        androidx.compose.material3.Text(title, style = typography.subtitle, color = colors.accentTertiary)
         Spacer(Modifier.height(4.dp))
-        Text(message, style = typography.bodySmall, color = colors.fgMuted)
+        androidx.compose.material3.Text(message, style = typography.bodySmall, color = colors.fgMuted)
         Spacer(Modifier.height(12.dp))
         KutaButton(text = "Retry", onClick = onRetry, variant = KutaButtonVariant.SECONDARY)
     }

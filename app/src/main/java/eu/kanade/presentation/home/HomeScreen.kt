@@ -7,6 +7,7 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.data.anilist.AniListAiringSchedule
 import eu.kanade.tachiyomi.data.anilist.AniListMedia
 import eu.kanade.tachiyomi.data.anilist.AniListRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,6 +55,9 @@ class HomeScreenModel(
     private val _popular = MutableStateFlow<SectionState<List<AniListMedia>>>(SectionState.Loading)
     val popular: StateFlow<SectionState<List<AniListMedia>>> = _popular.asStateFlow()
 
+    private val _airing = MutableStateFlow<SectionState<List<AniListAiringSchedule>>>(SectionState.Loading)
+    val airing: StateFlow<SectionState<List<AniListAiringSchedule>>> = _airing.asStateFlow()
+
     init {
         loadAll()
     }
@@ -75,6 +79,12 @@ class HomeScreenModel(
             repository.getPopular().fold(
                 onSuccess = { _popular.value = SectionState.Success(it) },
                 onFailure = { _popular.value = SectionState.Error(it.message ?: "Failed to load") },
+            )
+        }
+        screenModelScope.launch {
+            repository.getAiringSchedule().fold(
+                onSuccess = { _airing.value = SectionState.Success(it) },
+                onFailure = { _airing.value = SectionState.Error(it.message ?: "Failed to load") },
             )
         }
     }
@@ -105,6 +115,16 @@ class HomeScreenModel(
             repository.getPopular().fold(
                 onSuccess = { _popular.value = SectionState.Success(it) },
                 onFailure = { _popular.value = SectionState.Error(it.message ?: "Failed to load") },
+            )
+        }
+    }
+
+    fun retryAiring() {
+        _airing.value = SectionState.Loading
+        screenModelScope.launch {
+            repository.getAiringSchedule().fold(
+                onSuccess = { _airing.value = SectionState.Success(it) },
+                onFailure = { _airing.value = SectionState.Error(it.message ?: "Failed to load") },
             )
         }
     }

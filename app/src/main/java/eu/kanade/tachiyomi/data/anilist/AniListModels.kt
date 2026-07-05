@@ -24,6 +24,17 @@ data class PageData(
 @Serializable
 data class MediaPage(
     val media: List<AniListMedia> = emptyList(),
+    val airingSchedules: List<AniListAiringSchedule> = emptyList(),
+)
+
+/** FORK: Phase 3 — Airing schedule for "Coming Up Next" section. */
+@Serializable
+data class AniListAiringSchedule(
+    val id: Long,
+    val airingAt: Long,
+    val timeUntilAiring: Long,
+    val episode: Int,
+    val media: AniListMedia? = null,
 )
 
 @Serializable

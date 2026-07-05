@@ -2,10 +2,13 @@ package tachiyomi.presentation.core.kuta.effects
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -77,6 +80,25 @@ fun Modifier.neonGridPattern(dotColor: Color = Color.White.copy(alpha = 0.03f)):
 )
 
 // ===== Notebook Effects =====
+
+/**
+ * Warm soft paper shadow — the Notebook equivalent of elevation.
+ * Uses Modifier.shadow with warm ambient/spot colors (brownish, not gray).
+ * Per 02-notebook.md §6.5.
+ */
+fun Modifier.paperShadow(
+    elevation: Dp = 4.dp,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(10.dp),
+    ambientColor: Color = Color(0xFF785F41).copy(alpha = 0.15f),
+    spotColor: Color = Color(0xFF785F41).copy(alpha = 0.2f),
+): Modifier = this.then(
+    Modifier.shadow(
+        elevation = elevation,
+        shape = shape,
+        ambientColor = ambientColor,
+        spotColor = spotColor,
+    ),
+)
 
 /**
  * Subtle dot-grid texture on paper surfaces.

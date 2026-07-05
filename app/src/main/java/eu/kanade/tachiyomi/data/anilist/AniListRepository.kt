@@ -27,6 +27,15 @@ class AniListRepository(
     suspend fun getByGenre(genre: String): Result<List<AniListMedia>> =
         fetch("${GENRE_PREFIX}$genre") { api.getByGenre(genre) }
 
+    suspend fun getAiringSchedule(): Result<List<AniListAiringSchedule>> =
+        withContext(Dispatchers.IO) {
+            try {
+                Result.success(api.getAiringSchedule())
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
     /** Clear all cached data (e.g., on pull-to-refresh). */
     fun clearCache() {
         synchronized(cache) { cache.clear() }

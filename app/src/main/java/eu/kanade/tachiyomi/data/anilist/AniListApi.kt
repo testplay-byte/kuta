@@ -85,6 +85,13 @@ class AniListApi(
     fun getByGenre(genre: String): List<AniListMedia> =
         request(AniListQueries.BY_GENRE, mapOf("genre" to genre)).data?.Page?.media.orEmpty()
 
+    /** FORK: Phase 3 — Upcoming airing schedules (for "Coming Up Next"). Returns the next ~20 episodes. */
+    fun getAiringSchedule(): List<AniListAiringSchedule> =
+        request(
+            AniListQueries.AIRING_SCHEDULE,
+            mapOf("airingAt" to (System.currentTimeMillis() / 1000)),
+        ).data?.Page?.airingSchedules.orEmpty()
+
     companion object {
         private const val API_URL = "https://graphql.anilist.co"
 

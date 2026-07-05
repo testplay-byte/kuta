@@ -87,4 +87,23 @@ object AniListQueries {
             }
         }
     """
+
+    /** FORK: Phase 3 — Airing schedules for "Coming Up Next" section.
+     * Returns upcoming episodes airing within the next 7 days, sorted by airing time.
+     * Per https://docs.anilist.co (AiringSchedule type). */
+    const val AIRING_SCHEDULE = """
+        query AiringSchedule(${"$"}airingAt: Int!, ${"$"}page: Int = 1, ${"$"}perPage: Int = 20) {
+            Page(page: ${"$"}page, perPage: ${"$"}perPage) {
+                airingSchedules(airingAt_greater: ${"$"}airingAt, sort: TIME) {
+                    id
+                    airingAt
+                    timeUntilAiring
+                    episode
+                    media {
+                        $MEDIA_FIELDS
+                    }
+                }
+            }
+        }
+    """
 }

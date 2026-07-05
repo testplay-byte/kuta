@@ -1,70 +1,54 @@
-// FORK: Phase 2B
+// FORK: Phase 3 — Notebook rewrite from primitives
 package tachiyomi.presentation.core.kuta.notebook
 
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
-import kotlin.random.Random
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.NavigationRailItemDefaults
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.ripple
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -72,18 +56,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import kotlin.random.Random
 import tachiyomi.presentation.core.kuta.components.KutaBadgeVariant
 import tachiyomi.presentation.core.kuta.components.KutaButtonVariant
 import tachiyomi.presentation.core.kuta.components.KutaCardElevation
@@ -93,27 +92,48 @@ import tachiyomi.presentation.core.kuta.components.KutaNavigationItem
 import tachiyomi.presentation.core.kuta.components.KutaTabItem
 import tachiyomi.presentation.core.kuta.components.KutaToggleStyle
 import tachiyomi.presentation.core.kuta.effects.paperTexture
+import tachiyomi.presentation.core.kuta.theme.KutaColors
 import tachiyomi.presentation.core.kuta.theme.KutaFonts
 import tachiyomi.presentation.core.kuta.theme.KutaSpacing
+import tachiyomi.presentation.core.kuta.theme.KutaTypography
 import tachiyomi.presentation.core.kuta.theme.kutaColors
 import tachiyomi.presentation.core.kuta.theme.kutaTypography
 
 /**
- * FORK: Phase 2B — Full Notebook component implementations.
- * Per DOCS/design-system/02-notebook.md §5.
+ * FORK: Phase 3 — Notebook component implementations built from Compose
+ * primitives (Box / Row / Column / BasicText / Canvas / BasicTextField).
  *
- * Each function has the SAME signature as the corresponding Material3 wrapper
- * (so [tachiyomi.presentation.core.kuta.components.KutaComponents] can swap
- * implementations without changes).
+ * Per DOCS/design-system/02-notebook.md §5. This file deliberately avoids
+ * `androidx.compose.material3.*` UI components — every surface, button, dialog,
+ * input, nav item, tab, toggle, slider, snackbar, dropdown, etc. is rebuilt
+ * from primitives so Notebook reads as a cozy paper journal, not "M3 with
+ * brown colors".
  *
- * Design principles applied throughout:
+ * The ONLY material-* symbols used are:
+ *   - `androidx.compose.material.icons.Icons.*` (icon ImageVector definitions;
+ *     rendered via `androidx.compose.foundation.Image` + `rememberVectorPainter`).
+ *
+ * Each public function preserves the exact signature from Phase 2B so
+ * [tachiyomi.presentation.core.kuta.components.KutaComponents] keeps working
+ * unchanged.
+ *
+ * Design principles applied throughout (per §1, §5, §6, §7):
  *   - Warm earth-tone palette read from [kutaColors] (composition local).
  *   - Paper texture via [Modifier.paperTexture] on cards / paper surfaces.
- *   - Soft warm shadows via [Modifier.shadow] with ambient/spot = paperShadow.
- *   - Slight rotations (-0.3deg hover, -2deg sticky-note) for hand-placed feel.
- *   - Caveat hand-written font (via [KutaFonts.Caveat]) for hero / dialog titles.
- *   - Dashed dividers for "torn paper" feel.
+ *   - Soft warm shadows via the private [Modifier.notebookShadow] helper
+ *     (uses `kutaColors.paperShadow` for ambient/spot so dark mode is right).
+ *   - Slight rotations (-0.3° hover, -1°..-2° sticky-note/chip) for
+ *     hand-placed feel.
+ *   - Caveat hand-written font (via [KutaFonts.Caveat] / typography.handWritten
+ *     or display) for hero / dialog titles, sticky notes.
+ *   - Dashed dividers + dashed borders for "torn paper" feel.
  *   - Sticky-note-styled badges/snackbars (stickyNote bg + slight rotation).
+ *   - Press: lift down 1dp + shadow shrink; Hover: lift up 2dp + rotate -0.3°.
+ *
+ * NOTE: text rendering uses [BasicText] (foundation) instead of M3 `Text`.
+ * [BasicText] takes color via `style.color`, so call sites use
+ * `style = typography.foo.copy(color = …)` instead of a separate `color = …`
+ * parameter.
  */
 
 // ===== Helpers =====
@@ -122,13 +142,13 @@ import tachiyomi.presentation.core.kuta.theme.kutaTypography
  * FORK: Adaptive paper-texture dot color. Light-mode uses dark warm dots,
  * dark-mode uses light warm dots. Spec §6.1 says 6% alpha for light and 4% for
  * dark — we approximate with a single 6% alpha applied to [KutaColors.fgPrimary]
- * (which is dark in light mode, light in dark mode). Keeps the API simple.
+ * (which is dark in light mode, light in dark mode).
  */
 private val paperDotColor: Color
     @Composable get() = kutaColors.fgPrimary.copy(alpha = 0.06f)
 
 /**
- * Washi-tape decoration — a semi-transparent strip rotated -2deg.
+ * Washi-tape decoration — a semi-transparent strip rotated -2°.
  * Per 02-notebook.md §6.4. Caller places it (e.g. at top of a card).
  */
 @Composable
@@ -145,14 +165,17 @@ fun WashiTape(modifier: Modifier = Modifier, color: Color? = null) {
 }
 
 /**
- * FORK: warm paper-shadow with consistent ambient/spot colors.
- * centralizes the [Modifier.shadow] call so all Notebook surfaces share the
- * same shadow tone.
+ * FORK: warm paper-shadow with consistent ambient/spot colors taken from the
+ * active [KutaColors.paperShadow] token. Centralizes [Modifier.shadow] so all
+ * Notebook surfaces share the same warm shadow tone (brown in light mode,
+ * near-black in dark mode — per §2.3).
+ *
+ * Returns `this` unchanged when elevation is zero so callers can blindly chain.
  */
-private fun Modifier.paperShadow(
+private fun Modifier.notebookShadow(
     elevation: Dp,
     shape: Shape = RoundedCornerShape(10.dp),
-    colors: tachiyomi.presentation.core.kuta.theme.KutaColors,
+    colors: KutaColors,
 ): Modifier {
     if (elevation <= 0.dp) return this
     val ambient = colors.paperShadow
@@ -163,6 +186,55 @@ private fun Modifier.paperShadow(
         shape = shape,
         ambientColor = ambient,
         spotColor = colors.paperShadow.copy(alpha = spotAlpha),
+    )
+}
+
+/**
+ * FORK: dashed-rectangle border used by [NotebookSkeleton]. Draws a dashed
+ * round-rect outline matching the box's bounds. Per §5.10 ("Dashed border
+ * looks like a sketch/placeholder").
+ */
+private fun Modifier.dashedRectangleBorder(
+    color: Color,
+    width: Dp,
+    dashLength: Dp = 6.dp,
+    gapLength: Dp = 4.dp,
+    cornerRadius: Dp = 8.dp,
+): Modifier = this.then(
+    Modifier.drawBehind {
+        drawRoundRect(
+            color = color,
+            style = Stroke(
+                width = width.toPx(),
+                pathEffect = PathEffect.dashPathEffect(
+                    floatArrayOf(dashLength.toPx(), gapLength.toPx()),
+                    0f,
+                ),
+            ),
+            cornerRadius = CornerRadius(cornerRadius.toPx(), cornerRadius.toPx()),
+        )
+    },
+)
+
+/**
+ * FORK: icon renderer that avoids `androidx.compose.material3.Icon`. Renders
+ * an [ImageVector] via [rememberVectorPainter] + [Image] (foundation), with an
+ * optional [ColorFilter.tint] for color. Per the Phase 3 brief: only M3 *UI*
+ * components are off-limits; the `Icons.Filled.*` ImageVectors themselves are
+ * just data and remain available.
+ */
+@Composable
+private fun IconImage(
+    imageVector: ImageVector,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    tint: Color = Color.Unspecified,
+) {
+    Image(
+        painter = rememberVectorPainter(imageVector),
+        contentDescription = contentDescription,
+        modifier = modifier,
+        colorFilter = if (tint != Color.Unspecified) ColorFilter.tint(tint) else null,
     )
 }
 
@@ -181,6 +253,7 @@ fun NotebookButton(
     val typography = kutaTypography
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
+    val isPressed by interactionSource.collectIsPressedAsState()
 
     val bgColor = when (variant) {
         KutaButtonVariant.PRIMARY -> colors.accentPrimary
@@ -199,20 +272,32 @@ fun NotebookButton(
         else -> Color.Transparent
     }
     val isGhost = variant == KutaButtonVariant.GHOST
+    val isElevated = !isGhost
 
-    // FORK: hover lift + rotate per 02-notebook.md §5.1 + §7.
+    // FORK: hover lift + rotate per §5.1 + §7. Press overrides hover (paper
+    // pressed down 1dp). Ghost has no shadow/lift.
     val lift by animateDpAsState(
-        targetValue = if (isHovered && enabled) (-2).dp else 0.dp,
+        targetValue = when {
+            !enabled || !isElevated -> 0.dp
+            isPressed -> 1.dp
+            isHovered -> (-2).dp
+            else -> 0.dp
+        },
         animationSpec = tween(durationMillis = 200),
         label = "nb-btn-lift",
     )
     val rotation by animateFloatAsState(
-        targetValue = if (isHovered && enabled && !isGhost) -0.3f else 0f,
+        targetValue = if (isHovered && enabled && isElevated) -0.3f else 0f,
         animationSpec = tween(durationMillis = 200),
         label = "nb-btn-rotate",
     )
     val shadowElevation by animateDpAsState(
-        targetValue = if (isHovered && enabled && !isGhost) 8.dp else 4.dp,
+        targetValue = when {
+            !enabled || !isElevated -> 0.dp
+            isPressed -> 2.dp
+            isHovered -> 8.dp
+            else -> 4.dp
+        },
         animationSpec = tween(durationMillis = 200),
         label = "nb-btn-shadow",
     )
@@ -220,11 +305,11 @@ fun NotebookButton(
     Box(
         modifier = modifier
             .height(48.dp)
-            .then(if (enabled && lift != 0.dp) Modifier.offset(y = lift) else Modifier)
-            .then(if (enabled && rotation != 0f) Modifier.rotate(rotation) else Modifier)
+            .then(if (lift != 0.dp) Modifier.offset(y = lift) else Modifier)
+            .then(if (rotation != 0f) Modifier.rotate(rotation) else Modifier)
             .then(
-                if (!isGhost && enabled) {
-                    Modifier.paperShadow(shadowElevation, RoundedCornerShape(8.dp), colors)
+                if (isElevated && enabled) {
+                    Modifier.notebookShadow(shadowElevation, RoundedCornerShape(8.dp), colors)
                 } else {
                     Modifier
                 },
@@ -240,10 +325,11 @@ fun NotebookButton(
             )
             .clickable(
                 interactionSource = interactionSource,
-                indication = ripple(),
+                indication = LocalIndication.current,
                 enabled = enabled,
                 onClick = onClick,
             )
+            .hoverable(interactionSource)
             .padding(horizontal = KutaSpacing.lg),
         contentAlignment = Alignment.Center,
     ) {
@@ -252,14 +338,14 @@ fun NotebookButton(
             horizontalArrangement = Arrangement.spacedBy(KutaSpacing.sm),
         ) {
             if (icon != null) {
-                Icon(
+                IconImage(
                     icon,
                     contentDescription = null,
                     tint = textColor,
                     modifier = Modifier.size(18.dp),
                 )
             }
-            Text(text, color = textColor, style = typography.button)
+            BasicText(text, style = typography.button.copy(color = textColor))
         }
     }
 }
@@ -299,12 +385,14 @@ fun NotebookIconButton(
     val colors = kutaColors
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
-    // FORK: subtle bg tint on hover for tactile paper feel.
+    // FORK: subtle bg tint on hover for tactile paper feel (bgElevated @ 50%).
     val bgAlpha by animateFloatAsState(
         targetValue = if (isHovered && enabled) 0.5f else 0f,
         animationSpec = tween(durationMillis = 200),
         label = "nb-icon-btn-tint",
     )
+    val iconTint = if (isHovered && enabled) colors.accentPrimary
+    else if (enabled) colors.fgSecondary else colors.fgDim
 
     Box(
         modifier = modifier
@@ -313,17 +401,18 @@ fun NotebookIconButton(
             .background(colors.bgElevated.copy(alpha = bgAlpha * 0.5f))
             .clickable(
                 interactionSource = interactionSource,
-                indication = ripple(),
+                indication = LocalIndication.current,
                 enabled = enabled,
                 onClick = onClick,
-            ),
+            )
+            .hoverable(interactionSource),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
+        IconImage(
             icon,
             contentDescription = contentDescription,
-            tint = if (enabled) colors.fgSecondary else colors.fgDim,
-            modifier = Modifier.size(22.dp),
+            tint = iconTint,
+            modifier = Modifier.size(20.dp),
         )
     }
 }
@@ -369,7 +458,7 @@ fun NotebookCard(
             .hoverable(interactionSource)
             .then(if (lift != 0.dp) Modifier.offset(y = lift) else Modifier)
             .then(if (rotation != 0f) Modifier.rotate(rotation) else Modifier)
-            .paperShadow(shadowElevation, RoundedCornerShape(10.dp), colors)
+            .notebookShadow(shadowElevation, RoundedCornerShape(10.dp), colors)
             .clip(RoundedCornerShape(10.dp))
             .background(colors.bgPaper)
             .paperTexture(dotColor = paperDotColor)
@@ -401,45 +490,65 @@ fun NotebookInput(
     val colors = kutaColors
     val typography = kutaTypography
     val isError = variant == KutaInputVariant.ERROR
-    val actualEnabled = enabled && variant != KutaInputVariant.DISABLED
-    val borderColor = if (isError) colors.accentTertiary else colors.borderDefault
-    val focusedBorderColor = if (isError) colors.accentTertiary else colors.accentPrimary
+    val isDisabled = variant == KutaInputVariant.DISABLED || !enabled
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
 
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier,
-        enabled = actualEnabled,
-        textStyle = typography.body,
-        placeholder = {
-            // FORK: italic fgDim placeholder per 02-notebook.md §5.3.
-            Text(
-                placeholder,
-                color = colors.fgDim,
-                style = typography.body.copy(fontStyle = FontStyle.Italic),
-            )
-        },
-        singleLine = true,
-        shape = RoundedCornerShape(8.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = colors.bgSurface,
-            unfocusedContainerColor = colors.bgSurface,
-            disabledContainerColor = colors.bgElevated,
-            errorContainerColor = colors.bgSurface,
-            focusedBorderColor = focusedBorderColor,
-            unfocusedBorderColor = borderColor,
-            disabledBorderColor = colors.borderSubtle,
-            errorBorderColor = colors.accentTertiary,
-            focusedTextColor = colors.fgPrimary,
-            unfocusedTextColor = colors.fgPrimary,
-            disabledTextColor = colors.fgDim,
-            errorTextColor = colors.fgPrimary,
-            focusedLeadingIconColor = colors.accentPrimary,
-            unfocusedLeadingIconColor = colors.fgMuted,
-            cursorColor = colors.accentPrimary,
-            errorCursorColor = colors.accentTertiary,
-        ),
+    val borderColor = when {
+        isDisabled -> colors.borderSubtle
+        isError -> colors.accentTertiary
+        isFocused -> colors.accentPrimary
+        else -> colors.borderDefault
+    }
+    val bgColor = if (isDisabled) colors.bgElevated else colors.bgSurface
+    val textColor = if (isDisabled) colors.fgDim else colors.fgPrimary
+    val cursorColor = if (isError) colors.accentTertiary else colors.accentPrimary
+
+    // FORK: subtle paperShadow on focus for tactile "lifted off the page" feel.
+    val shadowElevation by animateDpAsState(
+        targetValue = if (isFocused && !isError && !isDisabled) 2.dp else 0.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "nb-input-shadow",
     )
+
+    Box(
+        modifier = modifier
+            .height(44.dp)
+            .notebookShadow(shadowElevation, RoundedCornerShape(8.dp), colors)
+            .clip(RoundedCornerShape(8.dp))
+            .background(bgColor)
+            .border(1.dp, borderColor, RoundedCornerShape(8.dp))
+            .padding(horizontal = KutaSpacing.md),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        // FORK: BasicTextField (NOT M3 OutlinedTextField) + decorationBox with
+        // a placeholder overlay when value is empty. Per §5.3.
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isDisabled,
+            textStyle = typography.body.copy(color = textColor),
+            singleLine = true,
+            interactionSource = interactionSource,
+            cursorBrush = SolidColor(cursorColor),
+            visualTransformation = VisualTransformation.None,
+            decorationBox = { innerTextField ->
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    if (value.isEmpty() && placeholder.isNotEmpty()) {
+                        BasicText(
+                            placeholder,
+                            style = typography.body.copy(
+                                fontStyle = FontStyle.Italic,
+                                color = colors.fgDim,
+                            ),
+                        )
+                    }
+                    innerTextField()
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -451,35 +560,70 @@ fun NotebookSearchInput(
 ) {
     val colors = kutaColors
     val typography = kutaTypography
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier,
-        textStyle = typography.body,
-        placeholder = {
-            Text(
-                placeholder,
-                color = colors.fgDim,
-                style = typography.body.copy(fontStyle = FontStyle.Italic),
-            )
-        },
-        leadingIcon = {
-            Icon(Icons.Filled.Search, contentDescription = null, tint = colors.fgMuted)
-        },
-        singleLine = true,
-        shape = RoundedCornerShape(8.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = colors.bgSurface,
-            unfocusedContainerColor = colors.bgSurface,
-            focusedBorderColor = colors.accentPrimary,
-            unfocusedBorderColor = colors.borderDefault,
-            focusedTextColor = colors.fgPrimary,
-            unfocusedTextColor = colors.fgPrimary,
-            focusedLeadingIconColor = colors.accentPrimary,
-            unfocusedLeadingIconColor = colors.fgMuted,
-            cursorColor = colors.accentPrimary,
-        ),
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+
+    val borderColor = if (isFocused) colors.accentPrimary else colors.borderDefault
+    val cursorColor = colors.accentPrimary
+    val textColor = colors.fgPrimary
+    val iconTint = if (isFocused) colors.accentPrimary else colors.fgMuted
+
+    val shadowElevation by animateDpAsState(
+        targetValue = if (isFocused) 2.dp else 0.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "nb-search-shadow",
     )
+
+    Box(
+        modifier = modifier
+            .height(44.dp)
+            .notebookShadow(shadowElevation, RoundedCornerShape(8.dp), colors)
+            .clip(RoundedCornerShape(8.dp))
+            .background(colors.bgSurface)
+            .border(1.dp, borderColor, RoundedCornerShape(8.dp))
+            .padding(horizontal = KutaSpacing.md),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(KutaSpacing.sm),
+        ) {
+            IconImage(
+                Icons.Filled.Search,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(18.dp),
+            )
+            // FORK: BasicTextField takes the remaining width (weight 1f).
+            Box(modifier = Modifier.weight(1f)) {
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = typography.body.copy(color = textColor),
+                    singleLine = true,
+                    interactionSource = interactionSource,
+                    cursorBrush = SolidColor(cursorColor),
+                    visualTransformation = VisualTransformation.None,
+                    decorationBox = { innerTextField ->
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            if (value.isEmpty()) {
+                                BasicText(
+                                    placeholder,
+                                    style = typography.body.copy(
+                                        fontStyle = FontStyle.Italic,
+                                        color = colors.fgDim,
+                                    ),
+                                )
+                            }
+                            innerTextField()
+                        }
+                    },
+                )
+            }
+        }
+    }
 }
 
 // ===== Dialogs / Sheets (per §5.4) =====
@@ -491,20 +635,26 @@ fun NotebookDialog(
     content: @Composable () -> Unit,
 ) {
     val colors = kutaColors
-    // FORK: M3 AlertDialog with paper-textured surface, strong border, deep
-    // warm shadow. Max width 560dp per 02-notebook.md §5.4. We use AlertDialog
-    // (not Dialog) so we inherit M3 scrim + dismiss behavior for free.
-    AlertDialog(
+    // FORK: androidx.compose.ui.window.Dialog (NOT M3 AlertDialog) so we
+    // fully control the surface. usePlatformDefaultWidth = false lets us
+    // impose the 560dp max-width per §5.4.
+    Dialog(
         onDismissRequest = onDismissRequest,
-        confirmButton = {},
-        modifier = modifier
-            .widthIn(max = 560.dp)
-            .paperTexture(dotColor = paperDotColor),
-        containerColor = colors.bgPaper,
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 0.dp,
-        text = { content() },
-    )
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = modifier
+                .widthIn(max = 560.dp)
+                .fillMaxWidth()
+                .notebookShadow(8.dp, RoundedCornerShape(12.dp), colors)
+                .clip(RoundedCornerShape(12.dp))
+                .background(colors.bgPaper)
+                .paperTexture(dotColor = paperDotColor)
+                .border(1.dp, colors.borderStrong, RoundedCornerShape(12.dp)),
+        ) {
+            content()
+        }
+    }
 }
 
 @Composable
@@ -518,20 +668,28 @@ fun NotebookAlertDialog(
     dismissText: String = "Cancel",
 ) {
     val typography = kutaTypography
+    val colors = kutaColors
     NotebookDialog(onDismissRequest = onDismiss, modifier = modifier) {
-        Column(verticalArrangement = Arrangement.spacedBy(KutaSpacing.md)) {
+        Column(
+            modifier = Modifier.padding(KutaSpacing.xl),
+            verticalArrangement = Arrangement.spacedBy(KutaSpacing.md),
+        ) {
             // FORK: dialog title in Caveat (hand-written) for cozy feel
             // per 02-notebook.md §8.4 ("Section headers… in Caveat for cozy feel").
-            Text(
+            BasicText(
                 title,
                 style = typography.headline.copy(
                     fontFamily = KutaFonts.Caveat,
                     fontSize = 32.sp,
+                    color = colors.fgPrimary,
                 ),
             )
-            Text(message, style = typography.body)
+            BasicText(
+                message,
+                style = typography.body.copy(color = colors.fgSecondary),
+            )
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(top = KutaSpacing.sm),
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -550,22 +708,44 @@ fun NotebookBottomSheet(
     content: @Composable () -> Unit,
 ) {
     val colors = kutaColors
-    val sheetState = rememberModalBottomSheetState()
-    // FORK: M3 ModalBottomSheet with Notebook colors + paper texture overlay.
-    ModalBottomSheet(
+    // FORK: Dialog with usePlatformDefaultWidth = false + bottom-aligned Box
+    // replaces M3 ModalBottomSheet (per Phase 3 brief). Top corner radius 16dp
+    // + paper texture + paperShadow + borderStrong + drag handle pill.
+    Dialog(
         onDismissRequest = onDismissRequest,
-        sheetState = sheetState,
-        modifier = modifier,
-        containerColor = colors.bgPaper,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-        dragHandle = null,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .paperTexture(dotColor = paperDotColor),
+                .fillMaxSize()
+                .wrapContentSize(Alignment.BottomCenter),
         ) {
-            content()
+            Column(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .notebookShadow(8.dp, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp), colors)
+                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                    .background(colors.bgPaper)
+                    .paperTexture(dotColor = paperDotColor)
+                    .border(
+                        1.dp,
+                        colors.borderStrong,
+                        RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                    )
+                    .navigationBarsPadding(),
+            ) {
+                // FORK: drag handle — a small accentPrimary pill at top center.
+                Box(
+                    modifier = Modifier
+                        .padding(vertical = KutaSpacing.sm)
+                        .align(Alignment.CenterHorizontally)
+                        .width(32.dp)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(colors.accentPrimary.copy(alpha = 0.7f)),
+                )
+                content()
+            }
         }
     }
 }
@@ -579,42 +759,69 @@ fun NotebookNavigationBar(
 ) {
     val colors = kutaColors
     val typography = kutaTypography
-    NavigationBar(
+    // FORK: Row of icon+label Columns — NO M3 NavigationBar/NavigationBarItem.
+    // bgSurface + paperTexture + top borderDefault; 64dp tall + nav inset.
+    Row(
         modifier = modifier
-            .paperTexture(dotColor = colors.fgPrimary.copy(alpha = 0.04f)),
-        containerColor = colors.bgSurface,
-        contentColor = colors.fgSecondary,
-        tonalElevation = 0.dp,
+            .fillMaxWidth()
+            .height(64.dp)
+            .background(colors.bgSurface)
+            .paperTexture(dotColor = colors.fgPrimary.copy(alpha = 0.04f))
+            .navigationBarsPadding(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
         items.forEach { item ->
-            NavigationBarItem(
-                selected = item.selected,
-                onClick = item.onClick,
-                icon = {
-                    // FORK: ink underline beneath active icon per §5.5.
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(item.icon, contentDescription = item.label)
-                        if (item.selected) {
-                            Box(
-                                Modifier
-                                    .padding(top = 2.dp)
-                                    .width(16.dp)
-                                    .height(2.dp)
-                                    .background(colors.accentPrimary.copy(alpha = 0.6f)),
-                            )
-                        }
-                    }
-                },
-                label = { Text(item.label, style = typography.bodySmall) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = colors.accentPrimary,
-                    selectedTextColor = colors.accentPrimary,
-                    unselectedIconColor = colors.fgMuted,
-                    unselectedTextColor = colors.fgMuted,
-                    indicatorColor = colors.accentPrimary.copy(alpha = 0.15f),
-                ),
-            )
+            NotebookNavItem(item, colors, typography)
         }
+    }
+}
+
+@Composable
+private fun NotebookNavItem(
+    item: KutaNavigationItem,
+    colors: KutaColors,
+    typography: KutaTypography,
+) {
+    // FORK: ink underline beneath active label per §5.5.
+    val tint = if (item.selected) colors.accentPrimary else colors.fgMuted
+    val interactionSource = remember { MutableInteractionSource() }
+    Column(
+        modifier = Modifier
+            .padding(horizontal = KutaSpacing.sm)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+                onClick = item.onClick,
+            ),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        IconImage(
+            item.icon,
+            contentDescription = item.label,
+            tint = tint,
+            modifier = Modifier.size(24.dp),
+        )
+        BasicText(
+            item.label,
+            style = typography.bodySmall.copy(color = tint),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        // Ink underline — small accent bar beneath active label.
+        Box(
+            modifier = Modifier
+                .width(20.dp)
+                .height(2.dp)
+                .then(
+                    if (item.selected) {
+                        Modifier.background(colors.accentPrimary.copy(alpha = 0.7f))
+                    } else {
+                        Modifier.background(Color.Transparent)
+                    },
+                ),
+        )
     }
 }
 
@@ -625,26 +832,20 @@ fun NotebookNavigationRail(
 ) {
     val colors = kutaColors
     val typography = kutaTypography
-    NavigationRail(
+    // FORK: Column of items in bgSidebar with right borderDefault — NO M3
+    // NavigationRail/NavigationRailItem. Active item gets ink underline.
+    Column(
         modifier = modifier
-            .paperTexture(dotColor = colors.fgPrimary.copy(alpha = 0.04f)),
-        containerColor = colors.bgSidebar,
-        contentColor = colors.fgSecondary,
+            .fillMaxHeight()
+            .background(colors.bgSidebar)
+            .paperTexture(dotColor = colors.fgPrimary.copy(alpha = 0.04f))
+            .border(1.dp, colors.borderDefault, RoundedCornerShape(0.dp))
+            .padding(vertical = KutaSpacing.lg),
+        verticalArrangement = Arrangement.spacedBy(KutaSpacing.md),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         items.forEach { item ->
-            NavigationRailItem(
-                selected = item.selected,
-                onClick = item.onClick,
-                icon = { Icon(item.icon, contentDescription = item.label) },
-                label = { Text(item.label, style = typography.bodySmall) },
-                colors = NavigationRailItemDefaults.colors(
-                    selectedIconColor = colors.accentPrimary,
-                    selectedTextColor = colors.accentPrimary,
-                    unselectedIconColor = colors.fgMuted,
-                    unselectedTextColor = colors.fgMuted,
-                    indicatorColor = colors.accentPrimary.copy(alpha = 0.15f),
-                ),
-            )
+            NotebookNavItem(item, colors, typography)
         }
     }
 }
@@ -656,39 +857,62 @@ fun NotebookTabRow(
 ) {
     val colors = kutaColors
     val typography = kutaTypography
-    val selectedIndex = tabs.indexOfFirst { it.selected }.coerceAtLeast(0)
-    TabRow(
-        selectedTabIndex = selectedIndex,
-        modifier = modifier,
-        containerColor = colors.bgSurface,
-        contentColor = colors.accentPrimary,
-        divider = {
-            // FORK: dashed divider for torn-paper feel between tabs and content.
-            NotebookDivider()
-        },
-        indicator = { tabPositions ->
-            if (selectedIndex < tabPositions.size) {
-                // FORK: ink-underline indicator — accent-colored bar with
-                // rounded ends, positioned via M3's tabIndicatorOffset.
-                TabRowDefaults.SecondaryIndicator(
+    // FORK: Row of Box+BasicText tabs with bottom borderSubtle divider; active
+    // tab gets accentPrimary bottom indicator (2dp, slightly rotated). NO M3
+    // TabRow / Tab.
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(colors.bgSurface)
+                .height(44.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            tabs.forEach { tab ->
+                val interactionSource = remember { MutableInteractionSource() }
+                val textColor = if (tab.selected) colors.accentPrimary else colors.fgMuted
+                Box(
                     modifier = Modifier
-                        .tabIndicatorOffset(tabPositions[selectedIndex])
-                        .rotate(-0.3f),
-                    height = 3.dp,
-                    color = colors.accentPrimary,
-                )
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = LocalIndication.current,
+                            onClick = tab.onClick,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        BasicText(
+                            tab.label,
+                            style = typography.subtitle.copy(color = textColor),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        // FORK: ink-underline indicator — accent bar with -0.3°
+                        // rotation (per Phase 3 brief). Active only.
+                        Box(
+                            modifier = Modifier
+                                .width(28.dp)
+                                .height(2.dp)
+                                .rotate(-0.3f)
+                                .then(
+                                    if (tab.selected) {
+                                        Modifier.background(colors.accentPrimary)
+                                    } else {
+                                        Modifier.background(Color.Transparent)
+                                    },
+                                ),
+                        )
+                    }
+                }
             }
-        },
-    ) {
-        tabs.forEach { tab ->
-            Tab(
-                selected = tab.selected,
-                onClick = tab.onClick,
-                text = { Text(tab.label, style = typography.subtitle) },
-                selectedContentColor = colors.accentPrimary,
-                unselectedContentColor = colors.fgMuted,
-            )
         }
+        // Dashed divider between tabs and content (torn-paper feel).
+        NotebookDivider()
     }
 }
 
@@ -704,15 +928,25 @@ fun NotebookListItem(
 ) {
     val colors = kutaColors
     val typography = kutaTypography
+    val interactionSource = remember { MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+    // FORK: bgElevated @ 50% on hover per §5.7.
+    val bgAlpha by animateFloatAsState(
+        targetValue = if (isHovered) 0.5f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "nb-list-item-hover",
+    )
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .background(colors.bgElevated.copy(alpha = bgAlpha * 0.5f))
+            .hoverable(interactionSource)
             // FORK: 16dp vertical / 24dp horizontal per §5.7.
             .padding(horizontal = KutaSpacing.xl, vertical = KutaSpacing.lg),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
-            Icon(
+            IconImage(
                 icon,
                 contentDescription = null,
                 tint = colors.fgSecondary,
@@ -721,13 +955,15 @@ fun NotebookListItem(
             Spacer(Modifier.width(KutaSpacing.lg))
         }
         Column(Modifier.weight(1f)) {
-            Text(title, color = colors.fgPrimary, style = typography.subtitle)
+            BasicText(title, style = typography.subtitle.copy(color = colors.fgPrimary))
             if (subtitle != null) {
                 // FORK: italic subtitle mimics hand-written metadata per §8.1.
-                Text(
+                BasicText(
                     subtitle,
-                    color = colors.fgMuted,
-                    style = typography.bodySmall.copy(fontStyle = FontStyle.Italic),
+                    style = typography.bodySmall.copy(
+                        fontStyle = FontStyle.Italic,
+                        color = colors.fgMuted,
+                    ),
                 )
             }
         }
@@ -759,7 +995,6 @@ fun NotebookBadge(
         KutaBadgeVariant.ERROR -> colors.accentTertiary
     }
     // FORK: random -2..+2 deg rotation per-instance — looks hand-pinned (§5.9).
-    // FORK: random -2..+2 deg rotation per-instance — looks hand-pinned (§5.9).
     val rotation = remember { Random.nextFloat() * 4f - 2f }
 
     Box(
@@ -771,7 +1006,22 @@ fun NotebookBadge(
             .padding(horizontal = KutaSpacing.sm, vertical = KutaSpacing.xs),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = textColor, style = typography.label)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            // FORK: small pin dot at left for sticky-note feel (only on DEFAULT
+            // variant — colored badges already convey their semantics).
+            if (variant == KutaBadgeVariant.DEFAULT) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(colors.accentTertiary.copy(alpha = 0.7f)),
+                )
+            }
+            BasicText(text, style = typography.label.copy(color = textColor))
+        }
     }
 }
 
@@ -784,17 +1034,18 @@ fun NotebookChip(
 ) {
     val colors = kutaColors
     val typography = kutaTypography
-    // FORK: per §5.8 — accent at 15% bg / 30% border when selected; rotation -1deg.
-    val bgColor = if (selected) colors.accentPrimary.copy(alpha = 0.15f) else Color.Transparent
+    // FORK: per §5.8 — accent at 15% bg / 30% border when selected; rotation -1°.
+    // Unselected uses muted bgElevated + fgMuted text.
+    val bgColor = if (selected) colors.accentPrimary.copy(alpha = 0.15f) else colors.bgElevated
     val borderColor = if (selected) colors.accentPrimary.copy(alpha = 0.3f) else colors.borderDefault
-    val textColor = if (selected) colors.accentPrimary else colors.fgSecondary
+    val textColor = if (selected) colors.accentPrimary else colors.fgMuted
     val rotation = if (selected) -1f else 0f
 
     val interactionSource = remember { MutableInteractionSource() }
     val chipModifier = if (onClick != null) {
         modifier.clickable(
             interactionSource = interactionSource,
-            indication = ripple(),
+            indication = LocalIndication.current,
             onClick = onClick,
         )
     } else {
@@ -810,7 +1061,7 @@ fun NotebookChip(
             .padding(horizontal = KutaSpacing.md, vertical = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = textColor, style = typography.label)
+        BasicText(text, style = typography.label.copy(color = textColor))
     }
 }
 
@@ -824,29 +1075,66 @@ fun NotebookToggle(
     style: KutaToggleStyle = KutaToggleStyle.SWITCH,
 ) {
     val colors = kutaColors
+    val interactionSource = remember { MutableInteractionSource() }
     if (style == KutaToggleStyle.SWITCH) {
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            modifier = modifier,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = colors.onAccent,
-                checkedTrackColor = colors.accentPrimary,
-                uncheckedThumbColor = colors.fgMuted,
-                uncheckedTrackColor = colors.bgElevated,
-            ),
+        // FORK: custom track (48dp × 24dp) + thumb (20dp circle). accentPrimary
+        // track when on, borderDefault when off. Animate thumb slide via
+        // animateDpAsState. NO M3 Switch.
+        val thumbOffset by animateDpAsState(
+            targetValue = if (checked) 26.dp else 2.dp,
+            animationSpec = tween(durationMillis = 200),
+            label = "nb-toggle-thumb",
         )
+        val trackColor = if (checked) colors.accentPrimary else colors.bgElevated
+        val trackBorder = if (checked) colors.accentPrimary else colors.borderDefault
+        val thumbColor = if (checked) colors.onAccent else colors.fgMuted
+        Box(
+            modifier = modifier
+                .size(width = 48.dp, height = 24.dp)
+                .clip(CircleShape)
+                .background(trackColor)
+                .border(1.dp, trackBorder, CircleShape)
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = LocalIndication.current,
+                    onClick = { onCheckedChange(!checked) },
+                ),
+        ) {
+            Box(
+                Modifier
+                    .offset(x = thumbOffset, y = 2.dp)
+                    .size(20.dp)
+                    .clip(CircleShape)
+                    .background(thumbColor),
+            )
+        }
     } else {
-        Checkbox(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            modifier = modifier,
-            colors = CheckboxDefaults.colors(
-                checkedColor = colors.accentPrimary,
-                uncheckedColor = colors.borderDefault,
-                checkmarkColor = colors.onAccent,
-            ),
-        )
+        // FORK: custom 24dp Box with 2dp accentPrimary border + 4dp corner.
+        // Checkmark icon when checked. NO M3 Checkbox.
+        val boxColor = if (checked) colors.accentPrimary else Color.Transparent
+        val borderColor = if (checked) colors.accentPrimary else colors.borderDefault
+        Box(
+            modifier = modifier
+                .size(24.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(boxColor)
+                .border(2.dp, borderColor, RoundedCornerShape(4.dp))
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = LocalIndication.current,
+                    onClick = { onCheckedChange(!checked) },
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (checked) {
+                IconImage(
+                    Icons.Filled.Check,
+                    contentDescription = "Checked",
+                    tint = colors.onAccent,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
     }
 }
 
@@ -858,20 +1146,70 @@ fun NotebookSlider(
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
 ) {
     val colors = kutaColors
-    // FORK: accentPrimary track + thumb per §8.3 (player scrubber).
-    Slider(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier,
-        valueRange = valueRange,
-        colors = SliderDefaults.colors(
-            thumbColor = colors.accentPrimary,
-            activeTrackColor = colors.accentPrimary,
-            inactiveTrackColor = colors.borderDefault,
-            activeTickColor = colors.accentPrimary.copy(alpha = 0.6f),
-            inactiveTickColor = colors.borderSubtle,
-        ),
-    )
+    val range = (valueRange.endInclusive - valueRange.start).coerceAtLeast(0f)
+    val fraction = if (range == 0f) 0f else ((value - valueRange.start) / range).coerceIn(0f, 1f)
+
+    // FORK: BoxWithConstraints so we know the track width in Dp — needed to
+    // convert drag delta (px) → value delta, and to position the thumb.
+    // NO M3 Slider.
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(20.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        val trackWidthDp = maxWidth
+        val density = LocalDensity.current
+        val trackWidthPx = with(density) { trackWidthDp.toPx() }
+        val draggableState = rememberDraggableState { delta ->
+            val fractionDelta = if (trackWidthPx > 0f) delta / trackWidthPx else 0f
+            val newValue = (value + fractionDelta * range)
+                .coerceIn(valueRange.start, valueRange.endInclusive)
+            onValueChange(newValue)
+        }
+
+        // Track background — full width, 4dp tall, bgElevated.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .align(Alignment.Center)
+                .clip(RoundedCornerShape(2.dp))
+                .background(colors.bgElevated),
+        ) {
+            // Filled portion — accentPrimary, fraction of width.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(fraction)
+                    .fillMaxHeight()
+                    .background(colors.accentPrimary),
+            )
+        }
+
+        // Thumb — 20dp circle, accentPrimary, paperShadow. Positioned via offset.
+        val thumbSize = 20.dp
+        val thumbOffsetDp = (trackWidthDp - thumbSize) * fraction
+        Box(
+            modifier = Modifier
+                .offset(x = thumbOffsetDp)
+                .size(thumbSize)
+                .align(Alignment.CenterStart)
+                .notebookShadow(2.dp, CircleShape, colors)
+                .clip(CircleShape)
+                .background(colors.accentPrimary),
+        )
+
+        // Drag overlay — full-size transparent Box that captures drags.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(20.dp)
+                .draggable(
+                    orientation = Orientation.Horizontal,
+                    state = draggableState,
+                ),
+        )
+    }
 }
 
 @Composable
@@ -880,19 +1218,49 @@ fun NotebookProgressBar(
     modifier: Modifier = Modifier,
 ) {
     val colors = kutaColors
-    if (progress != null) {
-        LinearProgressIndicator(
-            progress = { progress },
-            modifier = modifier,
-            color = colors.accentPrimary,
-            trackColor = colors.borderSubtle,
+    // FORK: indeterminate sweep uses rememberInfiniteTransition; determinate
+    // uses a fixed fraction fill. Both render via Canvas so we get one draw
+    // pass for track + fill (no M3 LinearProgressIndicator).
+    val transition = rememberInfiniteTransition(label = "nb-progress")
+    val animProgress by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1500),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "nb-progress-anim",
+    )
+
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(4.dp)
+            .clip(RoundedCornerShape(2.dp)),
+    ) {
+        // Track
+        drawRoundRect(
+            color = colors.bgElevated,
+            cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx()),
         )
-    } else {
-        LinearProgressIndicator(
-            modifier = modifier,
-            color = colors.accentPrimary,
-            trackColor = colors.borderSubtle,
-        )
+        if (progress != null) {
+            val width = size.width * progress.coerceIn(0f, 1f)
+            drawRoundRect(
+                color = colors.accentPrimary,
+                size = Size(width, size.height),
+                cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx()),
+            )
+        } else {
+            // Indeterminate — animated 30%-width sweep.
+            val sweepWidth = size.width * 0.3f
+            val startX = (size.width - sweepWidth) * animProgress
+            drawRoundRect(
+                color = colors.accentPrimary,
+                topLeft = Offset(startX, 0f),
+                size = Size(sweepWidth, size.height),
+                cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx()),
+            )
+        }
     }
 }
 
@@ -908,12 +1276,12 @@ fun NotebookSnackbar(
     val colors = kutaColors
     val typography = kutaTypography
     // FORK: sticky-note styled snackbar (per §5.11 aesthetic): yellow bg,
-    // slight rotation, paper shadow, hand-pinned feel.
+    // slight rotation, paper shadow, hand-pinned feel. NO M3 Snackbar.
     val rotation = remember { Random.nextFloat() * 2f - 1f }
     Box(
         modifier = modifier
             .rotate(rotation)
-            .paperShadow(6.dp, RoundedCornerShape(8.dp), colors)
+            .notebookShadow(6.dp, RoundedCornerShape(8.dp), colors)
             .clip(RoundedCornerShape(8.dp))
             .background(colors.stickyNote)
             .paperTexture(dotColor = paperDotColor)
@@ -924,11 +1292,10 @@ fun NotebookSnackbar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(KutaSpacing.md),
         ) {
-            Text(
+            BasicText(
                 message,
-                color = colors.fgPrimary,
-                style = typography.body,
                 modifier = Modifier.weight(1f),
+                style = typography.body.copy(color = colors.fgPrimary),
             )
             if (actionLabel != null) {
                 NotebookTextButton(
@@ -949,32 +1316,61 @@ fun NotebookDropdownMenu(
 ) {
     val colors = kutaColors
     val typography = kutaTypography
-    // FORK: M3 DropdownMenu with Notebook container/border + paper texture.
-    DropdownMenu(
-        expanded = expanded,
+    // FORK: androidx.compose.ui.window.Popup (NOT M3 DropdownMenu). When
+    // expanded == false, render nothing. NO M3 DropdownMenuItem — each item is
+    // a Row with hover bg + clickable.
+    if (!expanded) return
+    Popup(
+        alignment = Alignment.TopCenter,
         onDismissRequest = onDismissRequest,
-        modifier = modifier.paperTexture(dotColor = paperDotColor),
-        containerColor = colors.bgPaper,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, colors.borderDefault),
-        shadowElevation = 6.dp,
+        properties = PopupProperties(focusable = true),
     ) {
-        items.forEach { item ->
-            DropdownMenuItem(
-                text = {
-                    Text(
+        Column(
+            modifier = modifier
+                .widthIn(max = 280.dp)
+                .notebookShadow(6.dp, RoundedCornerShape(8.dp), colors)
+                .clip(RoundedCornerShape(8.dp))
+                .background(colors.bgPaper)
+                .paperTexture(dotColor = paperDotColor)
+                .border(1.dp, colors.borderDefault, RoundedCornerShape(8.dp))
+                .padding(vertical = KutaSpacing.xs),
+        ) {
+            items.forEach { item ->
+                val interactionSource = remember { MutableInteractionSource() }
+                val isHovered by interactionSource.collectIsHoveredAsState()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            if (isHovered) colors.accentPrimary.copy(alpha = 0.1f) else Color.Transparent,
+                        )
+                        .hoverable(interactionSource)
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = LocalIndication.current,
+                            onClick = {
+                                item.onClick()
+                                onDismissRequest()
+                            },
+                        )
+                        .padding(horizontal = KutaSpacing.lg, vertical = KutaSpacing.md),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(KutaSpacing.md),
+                ) {
+                    if (item.icon != null) {
+                        IconImage(
+                            item.icon,
+                            contentDescription = null,
+                            tint = colors.fgSecondary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    BasicText(
                         item.label,
-                        color = colors.fgPrimary,
-                        style = typography.body,
+                        style = typography.body.copy(color = colors.fgPrimary),
                     )
-                },
-                onClick = { item.onClick(); onDismissRequest() },
-                leadingIcon = if (item.icon != null) {
-                    { Icon(item.icon, contentDescription = null, tint = colors.fgSecondary) }
-                } else {
-                    null
-                },
-            )
+                }
+            }
         }
     }
 }
@@ -990,18 +1386,27 @@ fun NotebookScaffold(
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val colors = kutaColors
-    // FORK: M3 Scaffold with Notebook bgBase container color. Paper texture is
-    // not applied here (perf — would draw dots across the whole screen). Cards
-    // inside the scaffold bring their own texture.
-    Scaffold(
-        modifier = modifier,
-        topBar = topBar,
-        bottomBar = bottomBar,
-        floatingActionButton = floatingActionButton,
-        containerColor = colors.bgBase,
-        contentColor = colors.fgPrimary,
-        content = content,
-    )
+    // FORK: Column (bgBase bg) with topBar slot, content (weight 1f in a Box),
+    // bottomBar at bottom, FAB overlaid. NO M3 Scaffold. Paper texture is NOT
+    // applied to the whole screen (perf — would draw dots across the entire
+    // surface); child surfaces bring their own texture.
+    Box(modifier = modifier.fillMaxSize().background(colors.bgBase)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            topBar()
+            Box(modifier = Modifier.weight(1f)) {
+                content(PaddingValues(0.dp))
+            }
+            bottomBar()
+        }
+        // FAB overlaid at bottom-end with a cozy margin.
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = KutaSpacing.lg, bottom = KutaSpacing.lg),
+        ) {
+            floatingActionButton()
+        }
+    }
 }
 
 @Composable
@@ -1013,35 +1418,43 @@ fun NotebookTopAppBar(
 ) {
     val colors = kutaColors
     val typography = kutaTypography
-    TopAppBar(
-        title = {
-            // FORK: headline typography + fgPrimary per §5.6. Caveat is
-            // reserved for screen hero titles (per §8.2); here we use Inter
-            // to keep the app bar readable at small sizes.
-            Text(
-                title,
-                color = colors.fgPrimary,
-                style = typography.headline,
+    // FORK: Row (bgSurface + paperTexture + bottom borderDefault + statusBar
+    // inset) with nav icon slot + title BasicText + actions slot. 56dp + status
+    // bar inset. NO M3 TopAppBar.
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .statusBarsPadding()
+            .background(colors.bgSurface)
+            .paperTexture(dotColor = colors.fgPrimary.copy(alpha = 0.04f))
+            .border(1.dp, colors.borderDefault, RoundedCornerShape(0.dp))
+            .padding(horizontal = KutaSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (onBack != null) {
+            NotebookIconButton(
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                onClick = onBack,
+                contentDescription = "Back",
             )
-        },
-        modifier = modifier,
-        navigationIcon = {
-            if (onBack != null) {
-                NotebookIconButton(
-                    icon = Icons.AutoMirrored.Filled.ArrowBack,
-                    onClick = onBack,
-                    contentDescription = "Back",
-                )
-            }
-        },
-        actions = { actions() },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = colors.bgSurface,
-            titleContentColor = colors.fgPrimary,
-            navigationIconContentColor = colors.fgSecondary,
-            actionIconContentColor = colors.fgSecondary,
-        ),
-    )
+        } else {
+            Spacer(Modifier.width(KutaSpacing.sm))
+        }
+        // FORK: headline typography + fgPrimary per §5.6. Caveat is reserved
+        // for screen hero titles (per §8.2); here we use Inter to keep the app
+        // bar readable at small sizes.
+        BasicText(
+            title,
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = KutaSpacing.sm),
+            style = typography.headline.copy(color = colors.fgPrimary),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        actions()
+    }
 }
 
 @Composable
@@ -1050,11 +1463,19 @@ fun NotebookBottomAppBar(
     content: @Composable () -> Unit,
 ) {
     val colors = kutaColors
-    BottomAppBar(
+    // FORK: Row (bgSurface + paperTexture + top borderDefault) with nav inset.
+    // 56dp + navigationBars inset. NO M3 BottomAppBar.
+    Row(
         modifier = modifier
-            .paperTexture(dotColor = colors.fgPrimary.copy(alpha = 0.04f)),
-        containerColor = colors.bgSurface,
-        contentColor = colors.fgSecondary,
+            .fillMaxWidth()
+            .height(56.dp)
+            .navigationBarsPadding()
+            .background(colors.bgSurface)
+            .paperTexture(dotColor = colors.fgPrimary.copy(alpha = 0.04f))
+            .border(1.dp, colors.borderDefault, RoundedCornerShape(0.dp))
+            .padding(horizontal = KutaSpacing.lg),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(KutaSpacing.sm),
     ) {
         content()
     }
@@ -1068,27 +1489,68 @@ fun NotebookFAB(
     text: String? = null,
 ) {
     val colors = kutaColors
-    val shape = RoundedCornerShape(12.dp)
-    val fabModifier = modifier.paperShadow(8.dp, shape, colors)
-    if (text != null) {
-        ExtendedFloatingActionButton(
+    val typography = kutaTypography
+    val interactionSource = remember { MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+
+    // FORK: hover lift 2dp + rotate -0.3° (per Phase 3 brief).
+    val lift by animateDpAsState(
+        targetValue = if (isHovered) (-2).dp else 0.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "nb-fab-lift",
+    )
+    val rotation by animateFloatAsState(
+        targetValue = if (isHovered) -0.3f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "nb-fab-rotate",
+    )
+    val shadowElevation by animateDpAsState(
+        targetValue = if (isHovered) 12.dp else 8.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "nb-fab-shadow",
+    )
+
+    val shape = RoundedCornerShape(16.dp)
+    val contentModifier = Modifier
+        .then(if (lift != 0.dp) Modifier.offset(y = lift) else Modifier)
+        .then(if (rotation != 0f) Modifier.rotate(rotation) else Modifier)
+        .notebookShadow(shadowElevation, shape, colors)
+        .clip(shape)
+        .background(colors.accentPrimary)
+        .clickable(
+            interactionSource = interactionSource,
+            indication = LocalIndication.current,
             onClick = onClick,
-            modifier = fabModifier,
-            containerColor = colors.accentPrimary,
-            contentColor = colors.onAccent,
-            shape = shape,
-            icon = { Icon(icon, contentDescription = null) },
-            text = { Text(text) },
         )
-    } else {
-        FloatingActionButton(
-            onClick = onClick,
-            modifier = fabModifier,
-            containerColor = colors.accentPrimary,
-            contentColor = colors.onAccent,
-            shape = shape,
+        .hoverable(interactionSource)
+        .padding(horizontal = KutaSpacing.lg, vertical = KutaSpacing.lg)
+
+    if (text != null) {
+        // Extended FAB — Row with icon + text.
+        Row(
+            modifier = modifier.then(contentModifier),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(KutaSpacing.sm),
         ) {
-            Icon(icon, contentDescription = null)
+            IconImage(
+                icon,
+                contentDescription = null,
+                tint = colors.onAccent,
+                modifier = Modifier.size(24.dp),
+            )
+            BasicText(text, style = typography.button.copy(color = colors.onAccent))
+        }
+    } else {
+        Box(
+            modifier = modifier.then(contentModifier),
+            contentAlignment = Alignment.Center,
+        ) {
+            IconImage(
+                icon,
+                contentDescription = null,
+                tint = colors.onAccent,
+                modifier = Modifier.size(24.dp),
+            )
         }
     }
 }
@@ -1102,8 +1564,19 @@ fun NotebookSkeleton(
 ) {
     val colors = kutaColors
     // FORK: bgElevated + dashed border for sketch/placeholder feel per §5.10.
-    // Uses CircularProgressIndicator with caramel tint (per spec's "caramel at
-    // 10%" shimmer direction — a full Brush shimmer is heavier than needed).
+    // Shimmer: warm-tinted (caramel) diagonal sweep via rememberInfiniteTransition.
+    // NO M3 CircularProgressIndicator.
+    val transition = rememberInfiniteTransition(label = "nb-skeleton")
+    val animProgress by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1500),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "nb-skeleton-anim",
+    )
+
     Box(
         modifier = modifier
             .height(height.dp)
@@ -1111,15 +1584,24 @@ fun NotebookSkeleton(
             .clip(RoundedCornerShape(8.dp))
             .background(colors.bgElevated)
             .dashedRectangleBorder(colors.borderDefault, 1.dp)
-            .padding(KutaSpacing.sm),
-        contentAlignment = Alignment.Center,
-    ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(24.dp),
-            color = colors.accentQuaternary,
-            strokeWidth = 2.dp,
-        )
-    }
+            .drawWithContent {
+                drawContent()
+                // FORK: caramel-tinted diagonal sweep shimmer (10% alpha).
+                val shimmerColor = colors.accentQuaternary.copy(alpha = 0.10f)
+                val sweepWidth = size.width * 0.4f
+                val sweepX = (size.width + sweepWidth) * animProgress - sweepWidth
+                // Draw a translucent diagonal band as a skewed rectangle.
+                val skewHeight = size.height
+                val path = Path().apply {
+                    moveTo(sweepX, 0f)
+                    lineTo(sweepX + sweepWidth, 0f)
+                    lineTo(sweepX + sweepWidth - skewHeight, size.height)
+                    lineTo(sweepX - skewHeight, size.height)
+                    close()
+                }
+                drawPath(path = path, color = shimmerColor)
+            },
+    )
 }
 
 @Composable
@@ -1127,27 +1609,24 @@ fun NotebookDivider(
     modifier: Modifier = Modifier,
 ) {
     val colors = kutaColors
-    // FORK: dashed line for "torn paper" feel per §8.4 / §5.7.
+    // FORK: 1dp DASHED borderSubtle line (torn-paper feel) per §8.4 / §5.7.
+    // Built via Canvas + dashPathEffect (per Phase 3 brief).
     Canvas(
         modifier = modifier
             .fillMaxWidth()
             .height(1.dp),
     ) {
         val strokeWidth = 1.dp.toPx()
-        val dashPx = 6.dp.toPx()
-        val gapPx = 4.dp.toPx()
-        val totalWidth = size.width
-        var x = 0f
-        while (x < totalWidth) {
-            val endX = (x + dashPx).coerceAtMost(totalWidth)
-            drawLine(
-                color = colors.borderSubtle,
-                start = Offset(x, 0f),
-                end = Offset(endX, 0f),
-                strokeWidth = strokeWidth,
-            )
-            x += dashPx + gapPx
-        }
+        drawLine(
+            color = colors.borderSubtle,
+            start = Offset(0f, 0f),
+            end = Offset(size.width, 0f),
+            strokeWidth = strokeWidth,
+            pathEffect = PathEffect.dashPathEffect(
+                floatArrayOf(6.dp.toPx(), 4.dp.toPx()),
+                0f,
+            ),
+        )
     }
 }
 
@@ -1163,7 +1642,7 @@ fun NotebookAvatar(
     Box(
         modifier = modifier
             .size(size.dp)
-            .paperShadow(4.dp, CircleShape, colors)
+            .notebookShadow(4.dp, CircleShape, colors)
             .clip(CircleShape)
             .background(colors.bgElevated)
             .border(1.dp, colors.borderDefault, CircleShape),
@@ -1172,35 +1651,3 @@ fun NotebookAvatar(
         content()
     }
 }
-
-// ===== Private drawing helpers =====
-
-/**
- * FORK: dashed-rectangle border used by [NotebookSkeleton]. Draws a dashed
- * round-rect outline matching the box's bounds. Per §5.10 ("Dashed border
- * looks like a sketch/placeholder").
- */
-private fun Modifier.dashedRectangleBorder(
-    color: Color,
-    width: Dp,
-    dashLength: Dp = 6.dp,
-    gapLength: Dp = 4.dp,
-    cornerRadius: Dp = 8.dp,
-): Modifier = this.then(
-    Modifier.drawBehind {
-        drawRoundRect(
-            color = color,
-            style = Stroke(
-                width = width.toPx(),
-                pathEffect = PathEffect.dashPathEffect(
-                    floatArrayOf(dashLength.toPx(), gapLength.toPx()),
-                    0f,
-                ),
-            ),
-            cornerRadius = androidx.compose.ui.geometry.CornerRadius(
-                cornerRadius.toPx(),
-                cornerRadius.toPx(),
-            ),
-        )
-    },
-)
